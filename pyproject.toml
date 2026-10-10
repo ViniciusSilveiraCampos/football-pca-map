@@ -1,0 +1,54 @@
+[project]
+name = "football-pca-map"
+version = "0.1.0"
+description = "Mapas de PCA aplicados a dados de futebol em campo"
+readme = "README.md"
+authors = [
+    { name = "Vinicius Silveira Campos", email = "vinicius.silveira.campos@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+    "scikit-learn>=1.9.1",
+]
+
+[project.scripts]
+football-pca-map = "football_pca_map:main"
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=26.10.0",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.0",
+    "taskipy>=1.14.1",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# Black formata; ruff só faz lint (E501 fica com o black).
+select = ["I", "F", "E", "W", "B", "UP", "PL", "PT", "NPY", "PD"]
+ignore = ["E501", "PLR2004"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-p no:warnings"
+
+[tool.taskipy.tasks]
+format = "ruff check --fix . && black ."
+lint = "ruff check . && black --check ."
+test = "pytest -x --cov=football_pca_map --cov-report=term-missing"
