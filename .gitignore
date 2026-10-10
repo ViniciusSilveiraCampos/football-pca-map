@@ -24,3 +24,16 @@ outputs/
 .vscode/
 .idea/
 .DS_Store
+
+# LaTeX
+artigo/*.aux
+artigo/*.log
+artigo/*.out
+artigo/*.toc
+artigo/*.fls
+artigo/*.fdb_latexmk
+artigo/*.synctex.gz
+artigo/*.pdf
+
+# Claude Code (configuração pessoal, contém a chave do LangSmith)
+.claude/settings.local.json

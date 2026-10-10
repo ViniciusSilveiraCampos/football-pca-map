@@ -1,0 +1,57 @@
+\documentclass[12pt,oneside,a4paper,article,brazil]{abntex2}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx} % Times (NBR 14724)
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{indentfirst}
+
+\setlength{\parindent}{1.25cm}
+
+% Título temporário
+\titulo{Mapeamento de padrões táticos no futebol por análise de componentes principais}
+\autor{Vinicius Hatamoto\\
+Daniel Arlindo\\
+Camile Arantes\\
+Vinícius Silveira Campos\\
+Kawan Silva}
+\instituicao{Faculdades Integradas de Bauru\\
+Curso de Bacharelado em Ciência da Computação}
+% TODO: disciplina e professor(a) entram na folha de rosto (\preambulo, \orientador)
+\local{Bauru}
+\data{2026}
+
+\hypersetup{
+  hidelinks,
+  pdftitle={\imprimirtitulo},
+  pdfauthor={Vinicius Hatamoto, Daniel Arlindo, Camile Arantes, Vinícius Silveira Campos, Kawan Silva}
+}
+
+% Capa conforme NBR 14724:2011 — instituição, autores, título, local e ano,
+% centralizados, fonte 12, caixa alta; título em negrito.
+\renewcommand{\imprimircapa}{%
+  \begin{capa}%
+    \center
+    \MakeUppercase{\imprimirinstituicao}
+
+    \vspace*{2cm}
+    \MakeUppercase{\imprimirautor}
+
+    \vfill
+    \begin{center}
+      \textbf{\MakeUppercase{\imprimirtitulo}}
+    \end{center}
+    \vfill
+
+    \MakeUppercase{\imprimirlocal}\\
+    \imprimirdata
+  \end{capa}
+}
+
+\begin{document}
+
+\frenchspacing
+\imprimircapa
+
+\end{document}

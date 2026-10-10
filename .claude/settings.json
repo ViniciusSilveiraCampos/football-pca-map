@@ -1,0 +1,16 @@
+{
+  "extraKnownMarketplaces": {
+    "langsmith-claude-code-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "langchain-ai/langsmith-claude-code-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "langsmith-tracing@langsmith-claude-code-plugins": true
+  },
+  "env": {
+    "CC_LANGSMITH_PROJECT": "football-pca-map"
+  }
+}

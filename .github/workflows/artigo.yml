@@ -1,0 +1,43 @@
+name: Artigo PDF
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: main.tex
+          working_directory: artigo
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: artigo-pdf
+          path: artigo/main.pdf
+
+      # Por enquanto o PDF vai para o Discord; o email via SMTP fica para depois.
+      - name: Send PDF to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        run: |
+          # jq monta o JSON: a mensagem do commit não é interpolada direto no shell
+          payload=$(jq -n \
+            --arg msg "$COMMIT_MSG" \
+            --arg actor "${{ github.actor }}" \
+            --arg url "$COMMIT_URL" \
+            '{username: "football-pca-map",
+              embeds: [{title: "📄 Artigo atualizado", color: 3066993,
+                        description: "**Commit:** \($msg)\n**Autor:** `\($actor)`\n[Ver no GitHub](\($url))"}]}')
+          curl --fail-with-body -sS \
+            --form-string "payload_json=$payload" \
+            -F "files[0]=@artigo/main.pdf;type=application/pdf" \
+            "$DISCORD_WEBHOOK_URL"

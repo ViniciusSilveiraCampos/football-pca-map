@@ -33,3 +33,19 @@ uv add --dev <pacote>   # dependência de desenvolvimento
 - `.github/workflows/ci.yml` — jobs `black`, `ruff` e `test` em push para `main`/`develop` e em PRs.
 - `.github/workflows/claude-code-review.yml` — revisão automática de PR pelo Claude Code
   (precisa do secret `CLAUDE_CODE_OAUTH_TOKEN`).
+- `.github/workflows/artigo.yml` — a cada push na `main`, compila `artigo/main.tex` (abnTeX2) e
+  envia o PDF para um canal do Discord (secret `DISCORD_WEBHOOK_URL`).
+  Para compilar localmente: `cd artigo && latexmk -pdf main.tex`.
+
+## Tracing no LangSmith (opcional, por pessoa)
+
+O `.claude/settings.json` já habilita o plugin `langsmith-tracing`; o Claude Code oferece instalar
+o marketplace ao abrir o projeto. Cada pessoa manda as conversas para o **próprio** LangSmith:
+
+```bash
+cp .claude/settings.local.example.json .claude/settings.local.json
+# edite e coloque sua chave pessoal (smith.langchain.com → Settings → API Keys)
+```
+
+O `settings.local.json` está no `.gitignore`. Sem ele (ou com `TRACE_TO_LANGSMITH` diferente de
+`"true"`), nada é enviado. O projeto no LangSmith padrão é `football-pca-map`.
