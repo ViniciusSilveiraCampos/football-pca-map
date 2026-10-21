@@ -11,7 +11,9 @@ dependencies = [
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "pandas>=3.0.6",
+    "plotly>=7.1.0",
     "scikit-learn>=1.9.1",
+    "streamlit>=1.66.0",
 ]
 
 [project.scripts]
@@ -24,6 +26,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "black>=26.10.0",
+    "playwright>=1.64.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.0",
@@ -52,3 +55,6 @@ addopts = "-p no:warnings"
 format = "ruff check --fix . && black ."
 lint = "ruff check . && black --check ."
 test = "pytest -x --cov=football_pca_map --cov-report=term-missing"
+app = "streamlit run src/football_pca_map/app.py"
+gifs = "football-pca-map gifs"
+screenshots = "python scripts/screenshot_app.py"

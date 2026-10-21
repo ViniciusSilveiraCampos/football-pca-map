@@ -1,6 +1,0 @@
-{
-  "env": {
-    "TRACE_TO_LANGSMITH": "true",
-    "CC_LANGSMITH_API_KEY": "lsv2_pt_sua_chave_pessoal"
-  }
-}
