@@ -33,19 +33,28 @@ uv add --dev <pacote>   # dependência de desenvolvimento
 - `.github/workflows/ci.yml` — jobs `black`, `ruff` e `test` em push para `main`/`develop` e em PRs.
 - `.github/workflows/claude-code-review.yml` — revisão automática de PR pelo Claude Code
   (precisa do secret `CLAUDE_CODE_OAUTH_TOKEN`).
-- `.github/workflows/artigo.yml` — a cada push na `main`, compila `artigo/main.tex` (abnTeX2) e
+- `.github/workflows/artigo.yml` — a cada push na `main`, compila `artigo/main.tex` (resumo da XXI Jornada
+  Científica, modelo da FIB em abnTeX2: Arial 10, máx. 2 páginas, logo em `artigo/figuras/`) e
   envia o PDF para um canal do Discord (secret `DISCORD_WEBHOOK_URL`).
   Para compilar localmente: `cd artigo && latexmk -pdf main.tex`.
+- `.github/workflows/artigo-release.yml` — compila o resumo em PRs que tocam `artigo/` (PDF como
+  artefato; falha se passar de 2 páginas) e, em tags `artigo-v*`, anexa o PDF a um release do GitHub.
+  Trechos grifados com `\completar{...}` no `main.tex` ainda precisam ser preenchidos. Não precisa de secret
+  (usa o `GITHUB_TOKEN`). Para publicar: `git tag artigo-v1.0 && git push origin artigo-v1.0`.
 
-## Tracing no LangSmith (opcional, por pessoa)
+## Tracing no LangSmith (compartilhado)
 
-O `.claude/settings.json` já habilita o plugin `langsmith-tracing`; o Claude Code oferece instalar
-o marketplace ao abrir o projeto. Cada pessoa manda as conversas para o **próprio** LangSmith:
+Todo o time manda as conversas para **um único** LangSmith: o workspace compartilhado do projeto,
+no projeto `football-pca-map`. O `.claude/settings.json` já habilita o plugin `langsmith-tracing`
+(o Claude Code oferece instalar o marketplace ao abrir o projeto), define o projeto e liga o
+tracing (`TRACE_TO_LANGSMITH=true`). Só falta a chave, que **nunca** vai para o git:
 
 ```bash
 cp .claude/settings.local.example.json .claude/settings.local.json
-# edite e coloque sua chave pessoal (smith.langchain.com → Settings → API Keys)
+# edite e coloque uma chave gerada DENTRO do workspace compartilhado
+# (smith.langchain.com → troque para o workspace do projeto → Settings → API Keys)
 ```
 
-O `settings.local.json` está no `.gitignore`. Sem ele (ou com `TRACE_TO_LANGSMITH` diferente de
-`"true"`), nada é enviado. O projeto no LangSmith padrão é `football-pca-map`.
+Para ter acesso ao workspace, peça um convite ao dono do projeto. O `settings.local.json` está no
+`.gitignore`. Sem chave nada é enviado; para não rastrear, ponha `"TRACE_TO_LANGSMITH": "false"` no
+seu `settings.local.json`.

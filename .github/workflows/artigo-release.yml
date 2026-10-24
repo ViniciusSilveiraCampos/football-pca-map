@@ -1,0 +1,103 @@
+# Compila artigo/main.tex (resumo da XXI Jornada Científica da FIB, no
+# máximo 2 páginas) e publica o PDF como artefato. Em tags
+# artigo-v* também anexa o PDF a um release com o mesmo nome:
+#   git tag artigo-v1.0 && git push origin artigo-v1.0
+#
+# Push na main não dispara aqui: o artigo.yml já compila e envia ao Discord.
+# O prefixo artigo- evita colisão com futuras tags v* do pacote Python.
+
+name: Artigo Release
+
+on:
+  push:
+    tags: ["artigo-v*"]
+  pull_request:
+    paths:
+      - "artigo/**"
+      - ".github/workflows/artigo-release.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: artigo-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ARQUIVO: main
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # necessário para criar o release
+    steps:
+      - uses: actions/checkout@v6
+
+      # abntex2 -> texlive-publishers | memoir -> texlive-latex-extra
+      # mathptmx (Times) -> texlive-fonts-recommended
+      # babel brazil -> texlive-lang-portuguese
+      - name: Instalar o TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            poppler-utils \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-latex-extra \
+            texlive-fonts-recommended \
+            texlive-publishers \
+            texlive-lang-portuguese
+
+      # Auxiliares fora do repositório; o PDF sai com nome descritivo
+      # (football-pca-map-artigo-v1.0.pdf em tag, football-pca-map-artigo.pdf fora dela)
+      - name: Compilar com latexmk
+        working-directory: artigo
+        run: |
+          latexmk -pdf -interaction=nonstopmode -halt-on-error \
+            -outdir="$RUNNER_TEMP/build" "$ARQUIVO.tex"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            pdf="football-pca-map-$GITHUB_REF_NAME.pdf"
+          else
+            pdf="football-pca-map-artigo.pdf"
+          fi
+          cp "$RUNNER_TEMP/build/$ARQUIVO.pdf" "$GITHUB_WORKSPACE/$pdf"
+          echo "PDF=$pdf" >> "$GITHUB_ENV"
+
+      - name: Conferir o limite de 2 páginas
+        run: |
+          paginas=$(pdfinfo "$PDF" | awk '/^Pages:/ {print $2}')
+          echo "Páginas: $paginas"
+          if [ -z "$paginas" ] || [ "$paginas" -lt 1 ]; then
+            echo "::error::O PDF gerado está vazio ou inválido."
+            exit 1
+          fi
+          if [ "$paginas" -gt 2 ]; then
+            echo "::error::O resumo tem $paginas páginas; o limite da Jornada é 2."
+            exit 1
+          fi
+
+      - name: Mostrar o log em caso de erro
+        if: failure()
+        run: cat "$RUNNER_TEMP/build/$ARQUIVO.log" || true
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: artigo-pdf
+          path: ${{ env.PDF }}
+          if-no-files-found: error
+
+      # gh já vem instalado nos runners; se o release da tag já existir
+      # (ex.: criado pela interface), apenas substitui o PDF anexado
+      - name: Anexar o PDF ao release
+        if: startsWith(github.ref, 'refs/tags/artigo-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$PDF" --clobber
+          else
+            gh release create "$TAG" "$PDF" \
+              --title "Resumo Jornada 2026 - $TAG" \
+              --generate-notes
+          fi

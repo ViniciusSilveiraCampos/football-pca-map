@@ -1,57 +1,204 @@
-\documentclass[12pt,oneside,a4paper,article,brazil]{abntex2}
+\documentclass[10pt,oneside,a4paper,brazil]{abntex2}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{mathptmx} % Times (NBR 14724)
-\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=2cm]{geometry}
+\usepackage{helvet}
 \usepackage{graphicx}
-\usepackage{indentfirst}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{float}
+\usepackage{array}
 
-\setlength{\parindent}{1.25cm}
+% Resumo para a XXI Jornada Científica da FIB: o modelo exige Arial 10 em
+% todo o texto e no máximo 2 páginas; o Helvetica é a fonte equivalente
+\renewcommand{\familydefault}{\sfdefault}
+\renewcommand{\ttdefault}{lmtt}
+\graphicspath{{figuras/}}
 
-% Título temporário
-\titulo{Mapeamento de padrões táticos no futebol por análise de componentes principais}
-\autor{Vinicius Hatamoto\\
-Daniel Arlindo\\
-Camile Arantes\\
-Vinícius Silveira Campos\\
-Kawan Silva}
-\instituicao{Faculdades Integradas de Bauru\\
-Curso de Bacharelado em Ciência da Computação}
-% TODO: disciplina e professor(a) entram na folha de rosto (\preambulo, \orientador)
-\local{Bauru}
-\data{2026}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+% figura no meio do texto sem o respiro padrão, para caber nas 2 páginas
+\setlength{\intextsep}{0.4\baselineskip}
+\setlength{\abovecaptionskip}{0pt}
+\setlength{\belowcaptionskip}{2pt}
+\urlstyle{same}
 
 \hypersetup{
   hidelinks,
-  pdftitle={\imprimirtitulo},
-  pdfauthor={Vinicius Hatamoto, Daniel Arlindo, Camile Arantes, Vinícius Silveira Campos, Kawan Silva}
+  pdftitle={Como enxergar dados com muitas dimensões? Análise de componentes principais aplicada a jogadores do FIFA 19},
+  pdfauthor={Vinícius Silveira Campos, Kawan Henrique da Silva, Daniel da Silva Vecchi Arlindo, Vinicius Noboru Hatamoto, Camile Adalberto Arantes},
+  pdfsubject={XXI Jornada Científica - Faculdades Integradas de Bauru},
+  pdfkeywords={PCA, redução de dimensionalidade, FIFA 19, classificação, futebol}
 }
 
-% Capa conforme NBR 14724:2011 — instituição, autores, título, local e ano,
-% centralizados, fonte 12, caixa alta; título em negrito.
-\renewcommand{\imprimircapa}{%
-  \begin{capa}%
-    \center
-    \MakeUppercase{\imprimirinstituicao}
+% ------------------------------------------------------------------
+% Página A4 com margens de 2,5 cm, como no modelo .doc da Jornada
+% ------------------------------------------------------------------
+\setlrmarginsandblock{2.5cm}{2.5cm}{*}
+\setulmarginsandblock{3.9cm}{2.5cm}{*}
+\setheadfoot{2cm}{0pt}
+\setheaderspaces{1.25cm}{*}{*}
+\checkandfixthelayout
 
-    \vspace*{2cm}
-    \MakeUppercase{\imprimirautor}
+% ------------------------------------------------------------------
+% Cabeçalho da Jornada: logo da FIB à esquerda e dados do evento ao
+% centro, com uma linha abaixo, repetido em todas as páginas
+% ------------------------------------------------------------------
+\makepagestyle{jornada}
+\makeoddhead{jornada}
+  {\raisebox{-0.2cm}{\includegraphics[width=2.86cm]{logo_fib.jpeg}}}
+  {\parbox[b]{8cm}{\centering XXI Jornada Científica\\
+    Faculdades Integradas de Bauru - FIB\\ ISSN 2358-6044\\ 2026}}
+  {}
+\makeheadrule{jornada}{\textwidth}{0.6pt}
+\makeoddfoot{jornada}{}{}{}
 
-    \vfill
-    \begin{center}
-      \textbf{\MakeUppercase{\imprimirtitulo}}
-    \end{center}
-    \vfill
 
-    \MakeUppercase{\imprimirlocal}\\
-    \imprimirdata
-  \end{capa}
-}
+% Espaço equivalente a uma linha em branco do modelo
+\newcommand{\linhabranca}{\par\vspace{\baselineskip}}
 
 \begin{document}
 
 \frenchspacing
-\imprimircapa
+\pagestyle{jornada}
+\thispagestyle{jornada}
+
+% ================= IDENTIFICAÇÃO =================
+\begin{center}
+\textbf{COMO ENXERGAR DADOS COM MUITAS DIMENSÕES? ANÁLISE DE COMPONENTES
+PRINCIPAIS APLICADA A JOGADORES DO FIFA 19}
+
+\vspace{\baselineskip}
+
+Vinícius Silveira Campos\textsuperscript{1}; Kawan Henrique da Silva\textsuperscript{1};
+Daniel da Silva Vecchi Arlindo\textsuperscript{1}; Vinicius Noboru Hatamoto\textsuperscript{1};
+Camile Adalberto Arantes\textsuperscript{1}; Ronaldo Cesar Dametto\textsuperscript{2}
+
+\textsuperscript{1} Alunos do curso de Ciência da Computação -- Faculdades
+Integradas de Bauru -- FIB -- \url{vinicius.silveira.campos@gmail.com}.\\
+\textsuperscript{2} Professor do curso de Ciência da Computação -- Faculdades
+Integradas de Bauru -- FIB.
+\end{center}
+
+\linhabranca
+
+\textbf{Grupo de trabalho}: Ciência da Computação
+
+\linhabranca
+
+\textbf{Palavras-chave:} análise de componentes principais; redução de
+dimensionalidade; visualização de dados; classificação; futebol.
+
+\linhabranca
+
+% ================= RESUMO =================
+\textbf{Introdução:} Dados descritos por dezenas de variáveis não podem ser
+visualizados diretamente, o que dificulta perceber padrões. A análise de componentes principais (PCA),
+proposta por Pearson (1901), resolve esse problema ao transformar variáveis
+correlacionadas em componentes ortogonais, ordenados pela variância que
+explicam: o primeiro componente é a direção em que os dados mais se
+espalham, o segundo é a maior direção restante, e assim por diante
+(JOLLIFFE; CADIMA, 2016). Aqui ela é aplicada aos jogadores do jogo
+FIFA 19, descritos por 37 atributos.
+
+\linhabranca
+
+\textbf{Objetivos:} Reduzir os 37 atributos de cada jogador a poucas
+dimensões para (i) revelar, em um mapa bidimensional interpretável, os tipos
+de jogador existentes e (ii) apoiar um classificador de posição (goleiro,
+defensor, meio-campo e atacante), medindo quanta informação se perde a cada
+redução.
+
+\linhabranca
+
+\textbf{Relevância do Estudo:} Reduzir dimensionalidade é etapa recorrente
+em visualização e aprendizado de máquina; com dados familiares, fica visível
+o que a PCA faz e onde ela falha.
+
+\linhabranca
+
+\textbf{Material e métodos:} Utilizou-se o \emph{FIFA 19 Complete Player
+Dataset} (JAVAGARM, 2019), com 18.207 jogadores; 60 sem posição foram
+descartados, restando 18.147. Os 37 atributos são 34 habilidades em escala
+0--100, altura, peso e reputação internacional, e as 27 posições, agrupadas
+em quatro classes. O projeto foi desenvolvido em Python 3.12 com
+pandas, NumPy, scikit-learn (PEDREGOSA \emph{et al.}, 2011) e matplotlib. Os
+dados foram divididos em 75\% para treino e 25\% para teste, de forma
+estratificada e com semente fixa (42). Como a PCA é sensível à escala
+(JOLLIFFE, 2002), os atributos foram padronizados; padronizador e PCA foram
+ajustados só no treino, e o sinal dos componentes foi fixado. Foram conduzidos quatro experimentos: E1, com e
+sem padronização; E2, variância explicada por número de componentes ($k$);
+E3, regressão logística sobre $k$ componentes, avaliada pelo F1-macro no
+teste; e E4, PCA sem os goleiros.
+
+\linhabranca
+
+\textbf{Resultados e discussões:} Dois componentes guardam 66\% da
+variância (Figura \ref{fig:mapa}). O PC1 (52,1\%) separa goleiros de
+jogadores de linha habilidosos (controle de bola, drible e passe curto); o
+PC2 (13,9\%) opõe defesa (desarme, interceptação) a ataque (finalização,
+agilidade). Os goleiros
+formam um bloco isolado: a média de seus atributos específicos é 63,8,
+contra 10,5 nos jogadores de linha. São necessários 4 componentes para
+explicar 80\% da variância e 10 para 90\%.
+
+\begin{figure}[H]
+\caption{Mapa PCA dos 18.147 jogadores do FIFA 19}
+\label{fig:mapa}
+\centering
+\includegraphics[width=0.58\textwidth]{mapa_pca.png}
+\legend{Fonte: Elaborado pelos autores (2026).}
+\end{figure}
+
+No classificador, apenas 2 componentes elevam o F1-macro de 0,137
+(classificador trivial) para 0,702; com 3, 5 e 10 componentes ele chega a
+0,818, 0,842 e 0,881, a 1,4 ponto do modelo com os 37 atributos (0,895).
+
+Sem os goleiros (E4), o PC1 cai para 31,6\% e passa a representar a
+habilidade ofensiva. Um resultado inesperado foi que, com $k=2$, o
+classificador sem padronização obteve F1 maior (0,784). Os erros se concentram nas fronteiras entre classes definidas
+pelo grupo, como pontas e alas tomados por meio-campistas (68\% e 44\% de
+erro), enquanto nenhum goleiro foi classificado errado. Como limitações, os atributos são notas do jogo, não
+medições reais, e a PCA só capta relações lineares.
+
+\linhabranca
+
+\textbf{Conclusão:} A PCA resumiu 37 atributos em um mapa de duas dimensões
+que preserva 66\% da informação e cujos eixos têm leitura direta em termos de
+futebol: ``goleiro ou jogador de linha'' e ``ataque ou defesa''. Como trabalho futuro, propõe-se investigar o
+resultado sem padronização e comparar a PCA com t-SNE e UMAP.
+
+\linhabranca
+
+% ================= REFERÊNCIAS =================
+\textbf{Referências}
+
+\begin{flushleft}
+JAVAGARM. \textbf{FIFA 19 complete player dataset}. Kaggle, 2019.
+Disponível em:
+\url{https://www.kaggle.com/datasets/javagarm/fifa-19-complete-player-dataset}.
+Acesso em: 24 out. 2026.
+
+\vspace{\baselineskip}
+
+JOLLIFFE, I. T. \textbf{Principal component analysis}. 2. ed. New York:
+Springer, 2002.
+
+\vspace{\baselineskip}
+
+JOLLIFFE, I. T.; CADIMA, J. Principal component analysis: a review and recent
+developments. \textbf{Philosophical Transactions of the Royal Society A},
+v. 374, n. 2065, 2016.
+
+\vspace{\baselineskip}
+
+PEARSON, K. On lines and planes of closest fit to systems of points in space.
+\textbf{Philosophical Magazine}, v. 2, n. 11, p. 559-572, 1901.
+
+\vspace{\baselineskip}
+
+PEDREGOSA, F. \emph{et al.} Scikit-learn: machine learning in Python.
+\textbf{Journal of Machine Learning Research}, v. 12, p. 2825-2830, 2011.
+\end{flushleft}
 
 \end{document}

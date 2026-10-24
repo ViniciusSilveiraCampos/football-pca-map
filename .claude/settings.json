@@ -11,6 +11,7 @@
     "langsmith-tracing@langsmith-claude-code-plugins": true
   },
   "env": {
-    "CC_LANGSMITH_PROJECT": "football-pca-map"
+    "CC_LANGSMITH_PROJECT": "football-pca-map",
+    "TRACE_TO_LANGSMITH": "true"
   }
 }
