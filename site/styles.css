@@ -115,8 +115,12 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 /* ---------------------------------------------------------- TELAS ---- */
 .screen { position: relative; margin: 0; background: var(--scr); color: var(--scr-ink); border: 1px solid var(--rule); overflow: hidden; isolation: isolate; }
 .screen canvas { display: block; width: 100%; height: 100%; }
-.screen canvas.h360 { height: 360px; }
-.screen canvas.h140 { height: 140px; }
+/* altura fixa também fora de .screen (a curva do cap. 06 fica solta): sem ela o canvas
+   herda o tamanho interno, que o prep() multiplica pelo devicePixelRatio a cada frame,
+   e com escala 125%/150% (comum no Windows) a página cresce sem parar */
+canvas.h360, canvas.h140 { display: block; width: 100%; }
+canvas.h360 { height: 360px; }
+canvas.h140 { height: 140px; }
 .screen canvas.sq { aspect-ratio: 1; height: auto; }
 .hero-screen { height: clamp(320px, 52vw, 560px); }
 .osd { position: absolute; z-index: 4; color: var(--scr-ink); pointer-events: none; }
