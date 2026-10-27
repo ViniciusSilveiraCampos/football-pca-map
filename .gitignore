@@ -43,3 +43,6 @@ deploy/terraform/.terraform/
 deploy/terraform/terraform.tfvars
 deploy/terraform/*.tfstate*
 deploy/terraform/tfplan
+
+# Material do professor (não publicar)
+Ronaldo_Seminario/
