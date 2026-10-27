@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Builda a imagem do site no Docker host remoto, sem SSH e sem LAN.
 #
 # O projeto nao esta em nenhum registry, entao a imagem precisa nascer no proprio
@@ -14,8 +14,7 @@
 #   3. inicia o container (retorna na hora) e acompanha por polling.
 #
 # Assim toda request é curta e nada esbarra no timeout do proxy.
-set -eu
-set -o pipefail 2>/dev/null || true
+set -euo pipefail
 
 : "${PORTAINER_ENDPOINT:?PORTAINER_ENDPOINT não definido}"
 : "${PORTAINER_USER:?PORTAINER_USER não definido}"
