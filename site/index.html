@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Football PCA Map</title>
+  <meta name="description" content="37 atributos de 18.147 jogadores do FIFA 19 reduzidos a 2 números com PCA: os dados, cada etapa do processamento e o mapa final.">
+  <meta name="theme-color" content="#f6f5f1">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="top">
+    <div class="top-row">
+      <a class="brand" href="#inicio">
+        <span class="wordmark">PCA<span class="acc">/</span>MAP</span>
+        <span class="lbl muted">FITA 01 · FIFA 19</span>
+      </a>
+      <div class="top-meta">
+        <span class="lbl" id="chapter-name">00 INÍCIO</span>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="tape"><div id="tape-bar"></div></div>
+  </header>
+
+  <main>
+    <!-- ================================================== 00 INÍCIO -->
+    <section class="ch hero" id="inicio" data-name="INÍCIO">
+      <div class="wrap">
+        <div class="hero-kicker">
+          <span class="lbl">APRESENTA</span>
+          <span class="lbl muted">INTELIGÊNCIA ARTIFICIAL II · FIB · 2026</span>
+          <span class="lbl muted hide-s">GRUPO-BASE 4</span>
+        </div>
+        <h1 class="title">FOOTBALL PCA MAP</h1>
+        <div class="hero-sub">
+          <p class="tagline"><b><span data-num="features">37</span> atributos.</b> <b><span data-num="finais">18.147</span> jogadores.</b> <b class="acc">2 números.</b></p>
+          <p class="soft lede">Cada jogador do FIFA 19 é uma linha com dezenas de colunas. O PCA acha as duas direções
+            em que essas colunas mais variam e desenha todo mundo num mapa só. Esta fita mostra os dados de verdade,
+            cada etapa do processamento e o que sobra no fim.</p>
+        </div>
+
+        <figure class="screen hero-screen">
+          <canvas id="hero-canvas" aria-label="Animação: os jogadores saem das suas posições no campo e se reorganizam no mapa PCA"></canvas>
+          <div class="osd osd-tl vt">▶ PLAY</div>
+          <div class="osd osd-tr vt" id="hero-tc">00:00:00</div>
+          <div class="osd osd-bl"><b class="vt" id="hero-mode">CAMPO</b><span class="lbl" id="hero-cap">cada jogador na posição de origem</span></div>
+          <div class="osd osd-br legend-mini" data-legend></div>
+          <div class="bluescreen" id="hero-blue"><span class="vt">▶ PLAY</span><span class="vt small">FITA 01 — FOOTBALL PCA MAP</span></div>
+        </figure>
+        <div class="colorbars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+        <div class="kpis">
+          <div class="m"><span class="lbl muted">linhas brutas</span><div class="v" data-num="brutas">18.207</div></div>
+          <div class="m"><span class="lbl muted">atributos usados</span><div class="v" data-num="features">37</div></div>
+          <div class="m"><span class="lbl muted">informação em 2 eixos</span><div class="v" id="kpi-var2">66%</div></div>
+          <div class="m"><span class="lbl muted">F1 com 10 componentes</span><div class="v" id="kpi-f1">0,881</div></div>
+        </div>
+
+        <div class="pipeline" id="pipeline">
+          <div class="bh"><h2><i>▶▶</i>Como funciona</h2><span class="lbl muted">8 etapas · clique para pular</span></div>
+          <ol>
+            <li><a href="#dados"><span class="vt">01</span><b>CSV bruto</b><em>18.207 × 88</em></a></li>
+            <li><a href="#campo"><span class="vt">02</span><b>No campo</b><em>27 posições → 4</em></a></li>
+            <li><a href="#limpeza"><span class="vt">03</span><b>Limpeza</b><em>unidades · treino/teste</em></a></li>
+            <li><a href="#escala"><span class="vt">04</span><b>Padronização</b><em>z = (x − μ) / σ</em></a></li>
+            <li><a href="#correlacao"><span class="vt">05</span><b>Correlação</b><em>C = ZᵀZ / (n − 1)</em></a></li>
+            <li><a href="#autovetor"><span class="vt">06</span><b>Autovetores</b><em>C v = λ v</em></a></li>
+            <li><a href="#projecao"><span class="vt">07</span><b>Projeção</b><em>p = z · W</em></a></li>
+            <li><a href="#mapa"><span class="vt">08</span><b>Mapa</b><em>PC1 × PC2</em></a></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 01 DADOS -->
+    <section class="ch" id="dados" data-name="DADOS">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 01</span><span class="lbl muted">FIFA 19 COMPLETE PLAYER DATASET · KAGGLE</span></div>
+            <h1>O CSV<br>bruto</h1>
+          </div>
+          <div class="ph-side"><b data-num="brutas">18.207</b>linhas × <span data-num="colunas">88</span> colunas</div>
+        </div>
+        <p class="ph-desc">Cada linha é um jogador, com nome, clube, salário, altura em pés, peso em libras e as notas de habilidade de 0 a 100
+          dadas pela EA Sports. Destas colunas, usamos <b>37</b>: 34 habilidades, altura, peso e reputação internacional.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>o arquivo <code>data.csv</code> do Kaggle como foi baixado: <b><span data-num="brutas">18.207</span> jogadores × <span data-num="colunas">88</span> colunas</b>, com números, textos e unidades misturados.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>o começo do arquivo. Cada linha é um jogador; cada coluna, uma nota de 0 a 100 dada pelo jogo. Notas ≥ 85 aparecem em amarelo.</p></div>
+          <div><span class="lbl">③ SAI</span><p>a decisão de quais colunas usar: <b>37 viram os atributos <i>X</i></b>, <code>Position</code> vira o rótulo <i>y</i> e o resto é ignorado.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <figure class="screen raw-screen">
+            <div class="raw-scroll" id="raw-scroll">
+              <div class="raw-inner">
+                <div class="raw-head" id="raw-head"></div>
+                <div class="raw-body"><div class="raw-roll" id="raw-roll"></div></div>
+              </div>
+            </div>
+            <div class="osd osd-tl lbl raw-hint">deslize para o lado → 40 colunas</div>
+            <div class="osd osd-tr vt">REC ●</div>
+          </figure>
+          <div>
+            <div class="formula">
+              <span class="fx-tag lbl">MATRIZ DE DADOS</span>
+              <div class="fx"><i>X</i> ∈ ℝ<sup><span data-num="finais">18.147</span> × <span data-num="features">37</span></sup></div>
+              <p class="lbl muted">uma linha por jogador · uma coluna por atributo</p>
+            </div>
+            <div class="bh mt"><h2><i>37</i>Atributos</h2><span class="lbl muted">passe o mouse</span></div>
+            <div class="chips" id="feature-chips"></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="bh"><h2><i>?</i>O que é cada coluna</h2><span class="lbl muted">exemplo: a linha do L. Messi</span></div>
+          <div class="papeis">
+            <div class="papel id">
+              <span class="lbl">IDENTIFICAÇÃO · 2 colunas</span>
+              <div class="ex vt" id="ex-id">L. Messi · FC Barcelona</div>
+              <p><code>Name</code> e <code>Club</code>. Servem só para mostrar quem é quem; não entram em nenhuma conta.</p>
+            </div>
+            <div class="papel x">
+              <span class="lbl">ATRIBUTOS <i>X</i> · <span data-num="features">37</span> colunas</span>
+              <div class="ex vt" id="ex-x">Finishing 95 · Dribbling 97 · …</div>
+              <p>34 notas de habilidade (0 a 100), altura, peso e reputação internacional (1 a 5). <b>É isto que o PCA comprime.</b></p>
+            </div>
+            <div class="papel y">
+              <span class="lbl">RÓTULO <i>y</i> · 1 coluna</span>
+              <div class="ex vt" id="ex-y">RF → Atacante</div>
+              <p><code>Position</code>, agrupada em 4. O PCA não vê esta coluna: ela só pinta o mapa e serve de gabarito para o classificador.</p>
+            </div>
+            <div class="papel ig">
+              <span class="lbl">IGNORADAS · <span data-num="ignoradas">48</span> colunas</span>
+              <div class="ex vt" id="ex-ig">Value €110.5M · Wage €565K</div>
+              <p>ID, idade, foto, nacionalidade, valor, salário, contrato, <i>overall</i> e as 26 notas do jogador em cada posição
+                (LS, ST… RB), que praticamente entregariam a resposta.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 02 CAMPO -->
+    <section class="ch" id="campo" data-name="CAMPO">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 02</span><span class="lbl muted">O RÓTULO QUE O MODELO TENTA ACERTAR</span></div>
+            <h1>Os dados<br>no campo</h1>
+          </div>
+          <div class="ph-side"><b>27</b>posições → 4 grupos</div>
+        </div>
+        <p class="ph-desc">A coluna <code>Position</code> traz 27 códigos. Cada círculo abaixo está no lugar do campo onde aquela posição joga,
+          com área proporcional ao número de jogadores. Clique em uma posição para ver o perfil médio.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>só a coluna <code>Position</code> dos <span data-num="finais">18.147</span> jogadores.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada círculo é uma posição (GK, CB, ST…). O lugar é onde ela joga, o tamanho é quantos jogadores a têm e a cor é o grupo.</p></div>
+          <div><span class="lbl">③ SAI</span><p>o <b>rótulo</b> de cada jogador: um dos 4 grupos. O PCA não vê o rótulo; ele só pinta o mapa e corrige o classificador.</p></div>
+        </div>
+
+        <div class="pitch-wrap block">
+          <figure class="screen pitch-screen">
+            <svg id="pitch-svg" viewBox="-4 -4 113 76" role="img" aria-label="Campo com as 27 posições do FIFA 19"></svg>
+            <div class="osd osd-tl vt">◀ DEFESA</div>
+            <div class="osd osd-tr vt">ATAQUE ▶</div>
+          </figure>
+          <aside class="pos-panel" id="pos-panel"></aside>
+        </div>
+        <div class="groups" id="group-counts"></div>
+      </div>
+    </section>
+
+    <!-- ================================================== 03 LIMPEZA -->
+    <section class="ch" id="limpeza" data-name="LIMPEZA">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 03</span><span class="lbl muted">data.py · prepare()</span></div>
+            <h1>Limpeza</h1>
+          </div>
+          <div class="ph-side"><b data-num="finais">18.147</b>jogadores ficam</div>
+        </div>
+        <p class="ph-desc">Antes de qualquer conta, as colunas viram números na mesma unidade, as posições viram grupos e quem não tem posição sai,
+          com a contagem registrada no log.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>as 37 colunas escolhidas e a <code>Position</code>, algumas ainda como texto (<code>5'7</code>, <code>159lbs</code>).</p></div>
+          <div><span class="lbl">② NA TELA</span><p>três conversões passando por jogadores de verdade, quantos jogadores saíram e como os que ficaram foram divididos.</p></div>
+          <div><span class="lbl">③ SAI</span><p>duas tabelas só com números: <b>treino</b> (<span data-num="treino">13.610</span> jogadores, onde o modelo aprende) e <b>teste</b> (<span data-num="teste">4.537</span>, guardados para avaliar).</p></div>
+        </div>
+
+        <div class="convs block" id="convs">
+          <div class="conv">
+            <span class="lbl muted">ALTURA · pés'polegadas → cm</span>
+            <div class="conv-row"><span class="from vt" data-c="h-from">5'7</span><span class="arrow">→</span><span class="to" data-c="h-to">170,2 cm</span></div>
+            <div class="fx sm"><i>cm</i> = 30,48 · <i>pés</i> + 2,54 · <i>pol</i></div>
+          </div>
+          <div class="conv">
+            <span class="lbl muted">PESO · lbs → kg</span>
+            <div class="conv-row"><span class="from vt" data-c="w-from">159lbs</span><span class="arrow">→</span><span class="to" data-c="w-to">72,1 kg</span></div>
+            <div class="fx sm"><i>kg</i> = 0,4536 · <i>lbs</i></div>
+          </div>
+          <div class="conv">
+            <span class="lbl muted">POSIÇÃO · código → grupo</span>
+            <div class="conv-row"><span class="from vt" data-c="p-from">RF</span><span class="arrow">→</span><span class="to" data-c="p-to">Atacante</span></div>
+            <div class="lbl muted" data-c="who">L. Messi</div>
+          </div>
+        </div>
+
+        <div class="grid2 block">
+          <div>
+            <div class="bh"><h2><i>−60</i>Descartados</h2><span class="lbl muted">sem posição</span></div>
+            <div class="funnel" id="funnel"></div>
+          </div>
+          <div>
+            <div class="bh"><h2><i>75/25</i>Treino e teste</h2><span class="lbl muted">estratificado · random_state = 42</span></div>
+            <div class="split" id="split"></div>
+            <p class="note">O <code>fit</code> do scaler e do PCA olha <b>só o treino</b>. Teste e mapa passam apenas por <code>transform</code>,
+              como se fossem jogadores que o modelo nunca viu.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 04 ESCALA -->
+    <section class="ch" id="escala" data-name="ESCALA">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 04</span><span class="lbl muted">StandardScaler</span></div>
+            <h1>Padroni&shy;zação</h1>
+          </div>
+          <div class="ph-side nt"><b>μ = 0</b>σ = 1</div>
+        </div>
+        <p class="ph-desc">Altura vai de 155 a 205 cm, finalização de 0 a 100, reputação de 1 a 5. Sem padronizar, o PCA confunde
+          "escala grande" com "informação". Cada coluna perde a média e é dividida pelo desvio-padrão do treino.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>a tabela de treino, com cada coluna na sua unidade: cm, kg, nota de 0 a 100, estrelas de 1 a 5.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>a distribuição de três atributos. Ao padronizar, as três ficam centradas no 0 e com a mesma largura.</p></div>
+          <div><span class="lbl">③ SAI</span><p><i>Z</i>: a mesma tabela medida em “desvios da média”. 0 é um jogador médio; +2 é muito acima da média.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <figure class="screen">
+            <canvas id="scale-canvas" class="h360" aria-label="Distribuições de três atributos antes e depois da padronização"></canvas>
+            <div class="osd osd-tl vt" id="scale-mode">x · BRUTO</div>
+            <button class="osd osd-tr ghost-scr" id="scale-btn">▶ PADRONIZAR</button>
+          </figure>
+          <div>
+            <div class="formula">
+              <span class="fx-tag lbl">Z-SCORE</span>
+              <div class="fx big"><i>z</i><sub><i>ij</i></sub> = <span class="frac"><span><i>x</i><sub><i>ij</i></sub> − <i>μ</i><sub><i>j</i></sub></span><span><i>σ</i><sub><i>j</i></sub></span></span></div>
+              <dl class="where">
+                <dt><i>x</i><sub>ij</sub></dt><dd>valor do jogador <i>i</i> no atributo <i>j</i></dd>
+                <dt><i>μ</i><sub>j</sub></dt><dd>média do atributo no treino</dd>
+                <dt><i>σ</i><sub>j</sub></dt><dd>desvio-padrão do atributo no treino</dd>
+              </dl>
+            </div>
+            <table class="tbl mt" id="scale-table"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 05 CORRELAÇÃO -->
+    <section class="ch" id="correlacao" data-name="CORRELAÇÃO">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 05</span><span class="lbl muted">37 × 37 = 1.369 pares</span></div>
+            <h1>Correla&shy;ção</h1>
+          </div>
+          <div class="ph-side"><b id="corr-strong">—</b>pares com <span class="nt">|r|</span> ≥ 0,8</div>
+        </div>
+        <p class="ph-desc">Muitas colunas contam a mesma história: quem dribla bem também controla bem a bola, e todo goleiro é bom em todos
+          os atributos de goleiro. É essa redundância que o PCA vai comprimir.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p><i>Z</i>, a tabela padronizada do treino (<span data-num="treino">13.610</span> × 37).</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada quadradinho é um par de atributos. <b style="color:#e07a12">Laranja</b>: sobem juntos. <b style="color:#1f8fc4">Azul</b>: um sobe e o outro desce. Escuro: sem relação.</p></div>
+          <div><span class="lbl">③ SAI</span><p><i>C</i>, uma matriz 37 × 37 que resume como cada par de atributos anda junto. É dela que saem os componentes.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <figure class="screen corr-screen">
+            <canvas id="corr-canvas" class="sq" aria-label="Matriz de correlação 37 por 37"></canvas>
+            <div class="osd osd-bl lbl" id="corr-read">passe o mouse na matriz</div>
+          </figure>
+          <div>
+            <div class="formula">
+              <span class="fx-tag lbl">MATRIZ DE COVARIÂNCIA</span>
+              <div class="fx big"><i>C</i> = <span class="frac"><span>1</span><span><i>n</i> − 1</span></span> <i>Z</i><sup>⊤</sup><i>Z</i></div>
+              <p class="lbl muted">com <i>Z</i> padronizado, <i>C</i> é a matriz de correlação: <i>C</i><sub>jk</sub> = r(atributo j, atributo k)</p>
+            </div>
+            <div class="scale-key mt"><span class="lbl">−1</span><i class="grad"></i><span class="lbl">+1</span></div>
+            <ul class="list mt" id="corr-top"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 06 AUTOVETOR -->
+    <section class="ch" id="autovetor" data-name="AUTOVETOR">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 06</span><span class="lbl muted">A INTUIÇÃO EM 2 DIMENSÕES</span></div>
+            <h1>A direção<br>que mais varia</h1>
+          </div>
+          <div class="ph-side"><b class="nt">C v = λ v</b>autovetores</div>
+        </div>
+        <p class="ph-desc">Com só dois atributos, finalização e desarme, dá para ver o que o PCA faz: girar uma reta até a sombra dos
+          jogadores sobre ela ficar o mais espalhada possível. Arraste na tela para girar a reta. Com 37 atributos a busca é a mesma, em 37 dimensões.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>a matriz <i>C</i>. Aqui, só 2 dos 37 atributos para caber numa tela plana.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada ponto é um jogador do treino; a reta é uma direção candidata e os traços ligam cada jogador à sua sombra na reta. A curva mostra o espalhamento das sombras em cada ângulo.</p></div>
+          <div><span class="lbl">③ SAI</span><p><i>W</i>: as 2 melhores direções (PC1 e PC2), cada uma com 37 pesos, um para cada atributo.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <figure class="screen">
+            <canvas id="eig-canvas" class="sq" aria-label="Reta girando sobre a dispersão finalização × desarme"></canvas>
+            <div class="osd osd-tl vt" id="eig-angle">θ = 0°</div>
+            <button class="osd osd-tr ghost-scr" id="eig-btn">▶ ACHAR PC1</button>
+            <div class="osd osd-bl lbl muted">x: Finishing (z) · y: StandingTackle (z)</div>
+          </figure>
+          <div>
+            <div class="formula">
+              <span class="fx-tag lbl">PROBLEMA</span>
+              <div class="fx"><i>w</i><sub>1</sub> = arg max<sub>‖<i>w</i>‖ = 1</sub> Var(<i>Z w</i>) = <i>w</i><sup>⊤</sup><i>C w</i></div>
+              <div class="fx mt-s">⇒ <i>C w</i><sub>1</sub> = <i>λ</i><sub>1</sub> <i>w</i><sub>1</sub></div>
+              <p class="lbl muted">o PC1 é o autovetor de <i>C</i> com o maior autovalor; o PC2 é o próximo, perpendicular ao primeiro.</p>
+            </div>
+            <div class="meter mt">
+              <div class="bh"><h2><i>Var</i>Variância da projeção</h2><span class="vt" id="eig-var">—</span></div>
+              <canvas id="eig-curve" class="h140" aria-label="Variância projetada em função do ângulo"></canvas>
+              <div class="axis lbl muted"><span>0°</span><span>90°</span><span>180°</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 07 PROJEÇÃO -->
+    <section class="ch" id="projecao" data-name="PROJEÇÃO">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 07</span><span class="lbl muted">pipeline.transform()</span></div>
+            <h1>37 notas<br>viram 2</h1>
+          </div>
+          <div class="ph-side"><b id="proj-result">—</b><span id="proj-who">—</span></div>
+        </div>
+        <p class="ph-desc">Cada componente é uma receita: um peso para cada atributo. A coordenada do jogador é a soma de
+          <i>nota padronizada × peso</i>. Escolha um jogador e veja a conta ser feita linha por linha.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>as 37 notas padronizadas de um jogador (<i>z</i>) e os 37 pesos do componente (<i>w</i>).</p></div>
+          <div><span class="lbl">② NA TELA</span><p>uma linha por atributo: a nota, o peso e quanto a multiplicação soma ou tira do total. Os atributos que mais pesam vêm primeiro.</p></div>
+          <div><span class="lbl">③ SAI</span><p><b>2 números por jogador</b>, PC1 e PC2: o endereço dele no mapa.</p></div>
+        </div>
+
+        <div class="formula block">
+          <span class="fx-tag lbl">PROJEÇÃO</span>
+          <div class="fx big">PC<sub>c</sub> = <span class="sum">Σ<small>j=1..37</small></span> <i>z</i><sub>j</sub> · <i>w</i><sub>jc</sub>
+            <span class="muted">⇔</span> [PC1 PC2] = <i>z</i><sub>1×37</sub> · <i>W</i><sub>37×2</sub></div>
+        </div>
+
+        <div class="proj-ctrl mt">
+          <div class="seg" id="proj-pc"><button class="on" data-pc="0">PC1</button><button data-pc="1">PC2</button></div>
+          <div class="pick" id="proj-pick"></div>
+        </div>
+        <div class="proj" id="proj"></div>
+      </div>
+    </section>
+
+    <!-- ================================================== 08 MAPA -->
+    <section class="ch" id="mapa" data-name="MAPA">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 08</span><span class="lbl muted">TODOS OS JOGADORES · SÓ transform</span></div>
+            <h1>O mapa</h1>
+          </div>
+          <div class="ph-side"><b id="map-var">66,0%</b>da variância em 2 eixos</div>
+        </div>
+        <p class="ph-desc">Cada ponto é um jogador. Alterne entre <b>campo</b> (onde ele joga) e <b>mapa</b> (o que os números dele dizem)
+          e veja quem muda de lugar. Busque um nome, passe o mouse, clique para ver os vizinhos mais parecidos.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>os 2 números de cada um dos <span data-num="finais">18.147</span> jogadores, do treino e do teste.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada ponto é um jogador, pintado pelo grupo real. O PCA nunca viu essas cores: se elas se separam, as notas sozinhas já denunciam a posição.</p></div>
+          <div><span class="lbl">③ SAI</span><p>um mapa de semelhança. Jogadores perto um do outro têm perfis parecidos, mesmo jogando em clubes ou posições diferentes.</p></div>
+        </div>
+
+        <div class="map-ctrl block">
+          <div class="seg" id="map-mode"><button data-m="0">CAMPO</button><button class="on" data-m="1">MAPA PCA</button></div>
+          <div class="search">
+            <input id="map-search" type="search" placeholder="BUSCAR JOGADOR…" autocomplete="off" spellcheck="false">
+            <ul id="map-results" class="results hidden"></ul>
+          </div>
+          <div class="legend" id="map-legend"></div>
+        </div>
+        <div class="map-wrap">
+          <figure class="screen map-screen">
+            <canvas id="map-canvas" aria-label="Mapa PCA interativo com todos os jogadores"></canvas>
+            <div class="osd osd-tl vt" id="map-osd">MAPA · PC1 × PC2</div>
+            <div class="osd osd-tr vt" id="map-count">18.147</div>
+            <div class="tip hidden" id="map-tip"></div>
+            <div class="axis-lbl ax-x lbl">PC1 · goleiro ←→ jogador de linha habilidoso</div>
+            <div class="axis-lbl ax-y lbl">PC2 · ataque ←→ defesa</div>
+          </figure>
+          <aside class="player" id="player"></aside>
+        </div>
+
+        <div class="grid2 block">
+          <div>
+            <div class="bh"><h2><i>PC1</i>O que o eixo X mede</h2><span class="lbl muted" id="ld1-var">—</span></div>
+            <div class="bars ld" id="ld-pc1"></div>
+          </div>
+          <div>
+            <div class="bh"><h2><i>PC2</i>O que o eixo Y mede</h2><span class="lbl muted" id="ld2-var">—</span></div>
+            <div class="bars ld" id="ld-pc2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 09 VARIÂNCIA -->
+    <section class="ch" id="variancia" data-name="VARIÂNCIA">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 09</span><span class="lbl muted">EXPERIMENTO E2</span></div>
+            <h1>Quanto<br>sobra?</h1>
+          </div>
+          <div class="ph-side"><b id="var-k" class="nt">k = 2</b><span id="var-pct">66,0%</span></div>
+        </div>
+        <p class="ph-desc">Cada autovalor mede quanta variância seu componente carrega. Somando os primeiros <i>k</i>, sabemos quanto da
+          informação original sobrevive à compressão. Arraste o controle.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>os 37 autovalores do treino, um por componente.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada barra é quanto um componente explica sozinho; a linha amarela é quanto os <i>k</i> primeiros explicam juntos.</p></div>
+          <div><span class="lbl">③ SAI</span><p>quantos componentes guardar: 2 bastam para desenhar; com 10, sobram 90% da informação.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <figure class="screen">
+            <canvas id="var-canvas" class="h360" aria-label="Variância explicada por componente e acumulada"></canvas>
+            <div class="osd osd-tl vt">SCREE</div>
+          </figure>
+          <div>
+            <div class="formula">
+              <span class="fx-tag lbl">VARIÂNCIA EXPLICADA</span>
+              <div class="fx big">EV<sub>k</sub> = <span class="frac"><span><span class="sum">Σ<small>c=1..k</small></span> <i>λ</i><sub>c</sub></span><span><span class="sum">Σ<small>j=1..37</small></span> <i>λ</i><sub>j</sub></span></span></div>
+            </div>
+            <label class="slider mt"><span class="lbl">k componentes</span><input id="var-slider" type="range" min="1" max="37" value="2"><span class="vt" id="var-k2">2</span></label>
+            <div class="kpis two mt">
+              <div class="m"><span class="lbl muted">80% com</span><div class="v" id="var-80">k = 4</div></div>
+              <div class="m"><span class="lbl muted">90% com</span><div class="v" id="var-90">k = 10</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 10 MODELO -->
+    <section class="ch" id="modelo" data-name="MODELO">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 10</span><span class="lbl muted">EXPERIMENTO E3 · REGRESSÃO LOGÍSTICA</span></div>
+            <h1>Adivinhe<br>a posição</h1>
+          </div>
+          <div class="ph-side"><b id="clf-best">0,881</b>F1 com k = 10</div>
+        </div>
+        <p class="ph-desc">Treinamos um classificador de posição (Goleiro · Defensor · Meio · Atacante) usando só os <i>k</i> primeiros
+          componentes. Quanto ele perde em relação aos 37 atributos? Clique numa barra para ver a matriz de confusão no teste.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>os <i>k</i> primeiros componentes de cada jogador e o grupo real dele. Treino para aprender, teste para avaliar.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>cada barra é um modelo; o comprimento é o F1 no teste (1 = acerta tudo). O dummy sempre chuta “Meio-campo” e serve de piso.</p></div>
+          <div><span class="lbl">③ SAI</span><p>a resposta do projeto: com 10 dos 37 números, o F1 é 0,881, contra 0,895 usando a tabela inteira.</p></div>
+        </div>
+
+        <div class="grid2 block">
+          <div>
+            <div class="bars clf" id="clf-bars"></div>
+            <div class="formula mt">
+              <span class="fx-tag lbl">F1-MACRO</span>
+              <div class="fx">F1<sub>g</sub> = <span class="frac"><span>2 · P<sub>g</sub> · R<sub>g</sub></span><span>P<sub>g</sub> + R<sub>g</sub></span></span>
+                &nbsp; F1 = <span class="frac"><span>1</span><span>4</span></span> <span class="sum">Σ<small>g</small></span> F1<sub>g</sub></div>
+              <p class="lbl muted">P = precisão, R = revocação, média simples entre os 4 grupos</p>
+            </div>
+          </div>
+          <div>
+            <div class="bh"><h2><i id="cm-k">k=2</i>Matriz de confusão</h2><span class="lbl muted">linha = real · coluna = previsto</span></div>
+            <div class="cm" id="cm"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 11 FIM -->
+    <section class="ch fim" id="fim" data-name="FIM">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 11</span><span class="lbl muted">LEIA ANTES DE USAR</span></div>
+            <h1>Fim da<br>fita</h1>
+          </div>
+          <div class="ph-side"><b>⏏ EJECT</b>17/11/2026</div>
+        </div>
+
+        <div class="grid2 block">
+          <div>
+            <div class="bh"><h2><i>!</i>Limitações</h2></div>
+            <ul class="lims">
+              <li><b>Atributos de videogame.</b> Notas da EA Sports para a temporada 2018/19, não medições reais.</li>
+              <li><b>Rótulo simplificado.</b> 27 posições viram 4 grupos; boa parte dos "erros" está nas fronteiras que nós definimos.</li>
+              <li><b>PCA é linear.</b> Relações não lineares escapam, e cada eixo mistura todos os atributos.</li>
+              <li><b>Não use</b> para avaliar, contratar ou escalar jogadores reais.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="bh"><h2><i>05</i>Equipe</h2></div>
+            <ul class="list team">
+              <li><span class="lbl muted">dados e EDA</span><span class="t">Kawan Henrique da Silva</span></li>
+              <li><span class="lbl muted">pré-proc. e PCA</span><span class="t">Vinícius Silveira Campos</span></li>
+              <li><span class="lbl muted">experimentos</span><span class="t">Daniel da Silva Vecchi Arlindo</span></li>
+              <li><span class="lbl muted">protótipo web</span><span class="t">Vinicius Noboru Hatamoto</span></li>
+              <li><span class="lbl muted">comunicação</span><span class="t">Camile Adalberto Arantes</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot wrap">
+    <span class="lbl">FACULDADES INTEGRADAS DE BAURU · CIÊNCIA DA COMPUTAÇÃO · 2026</span>
+    <span class="lbl muted">DADOS: FIFA 19 · KAGGLE/JAVAGARM · CC BY-NC-SA 4.0</span>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

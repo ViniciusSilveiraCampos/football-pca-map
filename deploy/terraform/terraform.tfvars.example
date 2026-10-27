@@ -1,0 +1,15 @@
+# Copie para terraform.tfvars (que está no .gitignore) e preencha.
+# Só é usado para rodar local e pelo ../set-github-secrets.sh — o CI lê tudo do
+# GitHub Environment "production".
+
+portainer_endpoint    = ""
+portainer_user        = ""
+portainer_password    = ""
+cloudflare_api_key    = ""
+cloudflare_email      = ""
+cloudflare_account_id = ""
+cloudflare_zone_id    = ""
+
+# opcionais (têm default em variables.tf)
+# cloudflare_domain    = "viniciussc.com"
+# cloudflare_subdomain = "football-pca-map"

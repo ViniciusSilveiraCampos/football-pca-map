@@ -1,0 +1,74 @@
+# Deploy do site/ no Portainer, exposto por Cloudflare Tunnel (ver deploy/).
+#
+# Os segredos ficam SÓ no GitHub Environment "production" (ver
+# deploy/set-github-secrets.sh). O job validate não usa environment nem secret,
+# então roda em qualquer PR; só o apply, na main, recebe as credenciais.
+# Configure o environment para aceitar apenas a branch main.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+# O state no MinIO não tem lock: dois applies juntos corrompem o state.
+concurrency:
+  group: deploy-${{ github.event_name == 'pull_request' && github.ref || 'prod' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: deploy/terraform
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12"
+      - run: terraform fmt -check -diff
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
+  apply:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://football-pca-map.viniciussc.com
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_ACCESS_KEY }}
+      TF_VAR_portainer_endpoint: ${{ secrets.PORTAINER_ENDPOINT }}
+      TF_VAR_portainer_user: ${{ secrets.PORTAINER_USER }}
+      TF_VAR_portainer_password: ${{ secrets.PORTAINER_PASSWORD }}
+      TF_VAR_cloudflare_api_key: ${{ secrets.CLOUDFLARE_API_KEY }}
+      TF_VAR_cloudflare_email: ${{ secrets.CLOUDFLARE_EMAIL }}
+      TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12"
+          # o wrapper imprime stdout/stderr de novo; sem ele o log fica limpo
+          terraform_wrapper: false
+      - run: terraform init -backend-config=backend.hcl -input=false
+      - run: terraform plan -out=tfplan -input=false
+      - run: terraform apply -auto-approve -input=false tfplan

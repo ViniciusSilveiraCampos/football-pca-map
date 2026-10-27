@@ -41,6 +41,10 @@ uv add --dev <pacote>   # dependência de desenvolvimento
   artefato; falha se passar de 2 páginas) e, em tags `artigo-v*`, anexa o PDF a um release do GitHub.
   Trechos grifados com `\completar{...}` no `main.tex` ainda precisam ser preenchidos. Não precisa de secret
   (usa o `GITHUB_TOKEN`). Para publicar: `git tag artigo-v1.0 && git push origin artigo-v1.0`.
+- `.github/workflows/deploy.yml` — a cada push na `main` que toque `site/` ou `deploy/`, faz `terraform apply`
+  em `deploy/terraform/` (tunnel Cloudflare + stack no Portainer, mesmo padrão do `tf-parque-palmeiras`).
+  Os segredos ficam só no GitHub Environment `production` (restrito à `main`); em PRs roda só
+  `fmt`/`validate`, sem segredo. Detalhes e setup em `deploy/README.md`.
 
 ## Tracing no LangSmith (compartilhado)
 

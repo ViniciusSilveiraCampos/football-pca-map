@@ -1,0 +1,26 @@
+services:
+  football-pca-map:
+    image: football-pca-map:latest
+    container_name: football-pca-map
+    restart: unless-stopped
+    environment:
+      # nao e lido por nada: muda a config do container quando o site muda, pra
+      # o compose recriar em vez de manter a imagem antiga rodando
+      BUILD_HASH: ${BUILD_HASH}
+    networks:
+      - football-pca-map-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: football-pca-map-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      - football-pca-map
+    networks:
+      - football-pca-map-network
+
+# Sem `ports:` de proposito — a unica entrada e o tunel.
+networks:
+  football-pca-map-network:
+    driver: bridge

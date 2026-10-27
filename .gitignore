@@ -37,3 +37,9 @@ artigo/*.pdf
 
 # Claude Code (configuração pessoal, contém a chave do LangSmith)
 .claude/settings.local.json
+
+# Terraform (deploy/) — o tfvars tem as credenciais, nunca commitar
+deploy/terraform/.terraform/
+deploy/terraform/terraform.tfvars
+deploy/terraform/*.tfstate*
+deploy/terraform/tfplan

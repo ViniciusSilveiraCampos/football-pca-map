@@ -1,0 +1,3 @@
+# Workflows e infra mexem em produção e nos secrets: só entram com revisão do dono.
+/.github/ @ViniciusSilveiraCampos
+/deploy/  @ViniciusSilveiraCampos

@@ -1,0 +1,2 @@
+Fontes self-hosted (SIL Open Font License 1.1), via @fontsource 5.2.5:
+VT323, Barlow Condensed, Anton, IBM Plex Mono.
