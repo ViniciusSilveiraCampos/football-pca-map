@@ -135,9 +135,24 @@ const rawHeight = (cm) => { const inch = Math.round(cm / 2.54); return `${Math.f
 const rawWeight = (kg) => `${Math.round(kg / 0.45359237)}lbs`;
 
 // ---------------------------------------------------- CANVAS E LAÇOS ----
+// tamanho de cada canvas guardado pelo ResizeObserver: ler clientWidth a cada frame
+// força o navegador a recalcular o layout logo depois das escritas no DOM
+const SIZES = new WeakMap();
+const sizeRO = new ResizeObserver((es) => {
+  es.forEach((e) => SIZES.set(e.target, { w: e.contentRect.width, h: e.contentRect.height }));
+  wake();
+});
+function sizeOf(cv) {
+  let s = SIZES.get(cv);
+  if (!s) { s = { w: cv.clientWidth, h: cv.clientHeight }; SIZES.set(cv, s); sizeRO.observe(cv); }
+  return s;
+}
+// só mexe no DOM quando o texto muda de verdade
+const setText = (el, s) => { if (el.textContent !== s) el.textContent = s; };
+
 function prep(cv) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = cv.clientWidth, h = cv.clientHeight;
+  const { w, h } = sizeOf(cv);
   const W = Math.round(w * dpr), H = Math.round(h * dpr);
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const ctx = cv.getContext("2d");
@@ -198,14 +213,40 @@ function drawMapAxes(ctx, r, alpha) {
   ctx.restore();
 }
 
+// camada estática (fundo + pontos) desenhada uma vez e reaproveitada enquanto a chave não muda
+function layerCache() {
+  const cv = document.createElement("canvas");
+  let key = null;
+  return (main, k, draw) => {
+    if (k !== key || cv.width !== main.width || cv.height !== main.height) {
+      cv.width = main.width; cv.height = main.height; key = k;
+      const ctx = cv.getContext("2d");
+      ctx.setTransform(main.getContext("2d").getTransform());
+      draw(ctx);
+    }
+    return cv;
+  };
+}
+function blit(ctx, layer) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(layer, 0, 0); ctx.restore(); }
+
+// cada laço só roda com o canvas na tela; sem nenhum visível, o requestAnimationFrame para
 const loops = [];
-const loopIO = new IntersectionObserver((es) => es.forEach((e) => loops.forEach((o) => { if (o.el === e.target) o.vis = e.isIntersecting; })), { rootMargin: "80px" });
+let raf = 0;
+function wake() { if (!raf && loops.some((o) => o.vis)) raf = requestAnimationFrame(frame); }
+const loopIO = new IntersectionObserver((es) => {
+  es.forEach((e) => loops.forEach((o) => { if (o.el === e.target) o.vis = e.isIntersecting; }));
+  wake();
+}, { rootMargin: "80px" });
 function loop(el, fn) { const o = { el, fn, vis: false }; loops.push(o); loopIO.observe(el); return o; }
-function frame(now) { for (const o of loops) if (o.vis) o.fn(now); requestAnimationFrame(frame); }
+function frame(now) { raf = 0; for (const o of loops) if (o.vis) o.fn(now); wake(); }
 
 function onSeen(el, fn, threshold = 0.25) {
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.disconnect(); fn(); } }), { threshold });
   io.observe(el);
+}
+// avisa sempre que o elemento entra ou sai da tela
+function onVisible(el, fn, rootMargin = "0px") {
+  new IntersectionObserver((es) => es.forEach((e) => fn(e.isIntersecting)), { rootMargin }).observe(el);
 }
 const tc = (sec) => {
   const f = Math.floor((sec % 1) * 30), s = Math.floor(sec) % 60, m = Math.floor(sec / 60) % 60, h = Math.floor(sec / 3600);
@@ -221,19 +262,25 @@ function initHeader() {
     const i = sections.indexOf(e.target);
     $$("#tabs a").forEach((a) => a.classList.toggle("on", a.dataset.id === e.target.id));
     $("#chapter-name").textContent = `${String(i).padStart(2, "0")} ${e.target.dataset.name}`;
-    const on = $(`#tabs a[data-id="${e.target.id}"]`);
-    if (on) on.scrollIntoView({ block: "nearest", inline: "nearest" });
+    // rola só a faixa de abas: scrollIntoView também rolava a página para cima
+    // (a aba fica dentro do scroll-padding-top do header sticky) e travava a descida
+    const tabs = $("#tabs"), on = $(`#tabs a[data-id="${e.target.id}"]`);
+    if (on && tabs.scrollWidth > tabs.clientWidth) {
+      const d = on.getBoundingClientRect().left - tabs.getBoundingClientRect().left;
+      tabs.scrollTo({ left: tabs.scrollLeft + d - (tabs.clientWidth - on.offsetWidth) / 2, behavior: REDUCE ? "auto" : "smooth" });
+    }
   }), { rootMargin: "-45% 0px -50% 0px" });
   sections.forEach((s) => io.observe(s));
 
-  // barra de progresso da leitura
+  // barra de progresso da leitura: só recalcula quando há scroll ou a página muda de tamanho
   const bar = $("#tape-bar");
-  function tick() {
-    const max = document.documentElement.scrollHeight - innerHeight;
-    bar.style.width = (max > 0 ? clamp(scrollY / max, 0, 1) * 100 : 0).toFixed(2) + "%";
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
+  let max = 0, pending = false;
+  const paint = () => { pending = false; bar.style.transform = `scaleX(${max > 0 ? clamp(scrollY / max, 0, 1) : 0})`; };
+  const req = () => { if (!pending) { pending = true; requestAnimationFrame(paint); } };
+  const measure = () => { max = document.documentElement.scrollHeight - innerHeight; req(); };
+  addEventListener("scroll", req, { passive: true });
+  addEventListener("resize", measure);
+  new ResizeObserver(measure).observe(document.body);
 }
 
 function fillNumbers() {
@@ -256,7 +303,7 @@ function fillNumbers() {
 function initHero() {
   const cv = $("#hero-canvas"), modeEl = $("#hero-mode"), cap = $("#hero-cap"), tcEl = $("#hero-tc");
   const HOLD_A = 2.8, MOVE = 2.6, HOLD_B = 3.4, CYCLE = HOLD_A + MOVE + HOLD_B + MOVE;
-  let start = null, lastMode = "";
+  let start = null, lastMode = "", drawn = "";
   onSeen(cv, () => setTimeout(() => $("#hero-blue").classList.add("off"), REDUCE ? 0 : 1300), 0.2);
 
   loop(cv, (now) => {
@@ -267,13 +314,17 @@ function initHero() {
     else if (c < HOLD_A + MOVE) t = (c - HOLD_A) / MOVE;
     else if (c < HOLD_A + MOVE + HOLD_B) t = 1;
     else t = 1 - (c - HOLD_A - MOVE - HOLD_B) / MOVE;
-    const { ctx, w, h } = prep(cv);
-    const L = layout(w, h, { top: 50, bottom: 50, side: 26 });
-    ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
-    drawPitch(ctx, L.field, 1 - t * 1.4);
-    drawMapAxes(ctx, L.map, t * 1.4 - 0.4);
-    drawPlayers(ctx, L, t, { size: w < 600 ? 1.3 : 1.7, alpha: 0.6 });
-    tcEl.textContent = tc(s);
+    setText(tcEl, tc(s));
+    // nas pausas (t parado) o desenho é o mesmo: não redesenha os 18 mil pontos
+    const { ctx, w, h } = prep(cv), key = `${cv.width}|${cv.height}|${t}`;
+    if (key !== drawn) {
+      drawn = key;
+      const L = layout(w, h, { top: 50, bottom: 50, side: 26 });
+      ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
+      drawPitch(ctx, L.field, 1 - t * 1.4);
+      drawMapAxes(ctx, L.map, t * 1.4 - 0.4);
+      drawPlayers(ctx, L, t, { size: w < 600 ? 1.3 : 1.7, alpha: 0.6 });
+    }
     const m = t < 0.5 ? "CAMPO" : "MAPA PCA";
     if (m !== lastMode) {
       lastMode = m;
@@ -284,8 +335,9 @@ function initHero() {
 
   // as etapas do pipeline acendem em sequência
   const steps = $$("#pipeline li");
-  let k = 0;
-  setInterval(() => { steps.forEach((li, i) => li.classList.toggle("lit", i === k)); k = (k + 1) % steps.length; }, 1100);
+  let k = 0, seen = false;
+  onVisible($("#pipeline"), (v) => { seen = v; });
+  setInterval(() => { if (!seen) return; steps.forEach((li, i) => li.classList.toggle("lit", i === k)); k = (k + 1) % steps.length; }, 1100);
 }
 
 /* ========================================================== 01 DADOS ==== */
@@ -309,6 +361,8 @@ function initRaw() {
   // arrastar com o mouse também desliza a tabela para o lado
   const sc = $("#raw-scroll");
   let startX = null, startLeft = 0;
+  // a tabela rolando para de animar fora da tela
+  onVisible($(".raw-screen"), (v) => $(".raw-screen").classList.toggle("paused", !v));
   sc.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") return; startX = e.clientX; startLeft = sc.scrollLeft; sc.classList.add("drag"); });
   addEventListener("pointermove", (e) => { if (startX !== null) sc.scrollLeft = startLeft - (e.clientX - startX); });
   addEventListener("pointerup", () => { startX = null; sc.classList.remove("drag"); });
@@ -347,12 +401,16 @@ function initPitch() {
 
   const panel = $("#pos-panel"), screen = $(".pitch-screen");
   const outfield = F.slice(0, 34);
+  // perfil médio de cada posição, somado uma vez só (antes varria os 18 mil a cada troca)
+  const sums = {};
+  for (let i = 0; i < N; i++) {
+    const s = (sums[P.posicao[i]] ||= new Array(F.length).fill(0)), a = P.atributos[i];
+    for (let j = 0; j < F.length; j++) s[j] += a[j];
+  }
   function show(c) {
     $$(".pos-node", svg).forEach((n) => n.classList.toggle("on", n.dataset.code === c));
     screen.classList.add("dim");
-    const g = groupOf(c), mean = new Array(F.length).fill(0);
-    let n = 0;
-    for (let i = 0; i < N; i++) if (P.posicao[i] === c) { n++; const a = P.atributos[i]; for (let j = 0; j < F.length; j++) mean[j] += a[j]; }
+    const g = groupOf(c), n = counts[c], mean = sums[c];
     const top = outfield.map((f, j) => [f, mean[j] / n]).sort((a, b) => b[1] - a[1]).slice(0, 6);
     const b = best[c];
     panel.innerHTML = `<div class="code">${c}</div><div class="name">${POS[c][2]}</div>`
@@ -365,10 +423,12 @@ function initPitch() {
   let auto = true, k = codes.indexOf("ST");
   svg.addEventListener("click", (e) => { const n = e.target.closest(".pos-node"); if (n) { auto = false; show(n.dataset.code); } });
   svg.addEventListener("keydown", (e) => { const n = e.target.closest(".pos-node"); if (n && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); auto = false; show(n.dataset.code); } });
+  let seen = false;
+  onVisible(screen, (v) => { seen = v; screen.classList.toggle("paused", !v); });
   onSeen(svg, () => {
     svg.classList.add("in");
     show(codes[k]);
-    const id = setInterval(() => { if (!auto) return clearInterval(id); k = (k + 1) % codes.length; show(codes[k]); }, 2600);
+    const id = setInterval(() => { if (!auto) return clearInterval(id); if (!seen) return; k = (k + 1) % codes.length; show(codes[k]); }, 2600);
   });
 
   const gmax = Math.max(...BY_GROUP.map((g) => g.length));
@@ -417,7 +477,7 @@ function initScale() {
   const S = sample(700, 7);
   const jit = S.map(() => (rand() - 0.5) * 2);
   const cv = $("#scale-canvas"), btn = $("#scale-btn"), modeEl = $("#scale-mode");
-  let target = 0, t = 0, auto = true, lastSwitch = 0, last = 0;
+  let target = 0, t = 0, auto = true, lastSwitch = 0, last = 0, drawn = "";
   btn.addEventListener("click", () => { auto = false; target = target ? 0 : 1; });
 
   const messi = BY_NAME.get("L. Messi");
@@ -431,9 +491,11 @@ function initScale() {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     if (auto && now - lastSwitch > 3800) { lastSwitch = now; target = target ? 0 : 1; }
     t += clamp(target - t, -dt / 1.4, dt / 1.4);
-    btn.textContent = target ? "◀ VOLTAR" : "▶ PADRONIZAR";
-    modeEl.textContent = t > 0.5 ? "z · PADRONIZADO" : "x · BRUTO";
-    const { ctx, w, h } = prep(cv);
+    setText(btn, target ? "◀ VOLTAR" : "▶ PADRONIZAR");
+    setText(modeEl, t > 0.5 ? "z · PADRONIZADO" : "x · BRUTO");
+    const { ctx, w, h } = prep(cv), key = `${cv.width}|${cv.height}|${t}`;
+    if (key === drawn) return;
+    drawn = key;
     ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
     const L = 18, R = w - 18, top = 52, rowH = (h - top - 40) / 3;
     const rx = (v) => L + (v / 210) * (R - L);
@@ -479,19 +541,23 @@ function initCorr() {
     const a = Math.abs(r), [cr, cg, cb] = r >= 0 ? [255, 138, 31] : [54, 197, 255];
     return `rgb(${12 + (cr - 12) * a | 0},${13 + (cg - 13) * a | 0},${13 + (cb - 13) * a | 0})`;
   };
-  let t0 = null, hover = null;
+  const COLOR = C.map((row) => row.map(color));
+  let t0 = null, hover = null, drawn = "";
   const geo = (w) => { const ml = 34, mt = 22, cell = (w - ml - 8) / n; return { ml, mt, cell }; };
   cv.addEventListener("mousemove", (e) => {
     const b = cv.getBoundingClientRect(), { ml, mt, cell } = geo(b.width);
     const j = Math.floor((e.clientX - b.left - ml) / cell), i = Math.floor((e.clientY - b.top - mt) / cell);
     hover = i >= 0 && j >= 0 && i < n && j < n ? [i, j] : null;
-    read.textContent = hover ? `${F[i]} × ${F[j]}  ·  r = ${sgn(C[i][j])}` : "passe o mouse na matriz";
+    setText(read, hover ? `${F[i]} × ${F[j]}  ·  r = ${sgn(C[i][j])}` : "passe o mouse na matriz");
   });
-  cv.addEventListener("mouseleave", () => { hover = null; read.textContent = "passe o mouse na matriz"; });
+  cv.addEventListener("mouseleave", () => { hover = null; setText(read, "passe o mouse na matriz"); });
   loop(cv, (now) => {
     if (t0 === null) t0 = now;
     const t = REDUCE ? 1 : clamp((now - t0) / 1800, 0, 1);
-    const { ctx, w } = prep(cv), { ml, mt, cell } = geo(w);
+    // depois da animação de entrada só redesenha quando o mouse muda de célula
+    const { ctx, w } = prep(cv), { ml, mt, cell } = geo(w), key = `${cv.width}|${cv.height}|${t}|${hover}`;
+    if (key === drawn) return;
+    drawn = key;
     ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, w);
     ctx.font = `${Math.max(8, Math.min(12, cell * 0.95))}px VT323, monospace`;
     ctx.fillStyle = "rgba(233,231,223,.6)";
@@ -501,7 +567,7 @@ function initCorr() {
     }
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
       if ((i + j) / (2 * n - 2) > t) continue;
-      ctx.fillStyle = color(C[i][j]);
+      ctx.fillStyle = COLOR[i][j];
       ctx.fillRect(ml + j * cell, mt + i * cell, cell - 0.6, cell - 0.6);
     }
     if (hover) {
@@ -540,6 +606,9 @@ function initEigen() {
   cv.addEventListener("pointerdown", (e) => { drag = true; cv.setPointerCapture(e.pointerId); setFromPointer(e); });
   cv.addEventListener("pointermove", (e) => { if (drag) setFromPointer(e); });
   cv.addEventListener("pointerup", () => { drag = false; });
+  cv.addEventListener("pointercancel", () => { drag = false; });
+  const base = layerCache();
+  let drawn = "";
 
   loop(cv, (now) => {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
@@ -554,17 +623,24 @@ function initEigen() {
     } else if (mode === "hold" && now > holdUntil && !drag) mode = "auto";
 
     const { ctx, w, h } = prep(cv), cx = w / 2, cy = h / 2, sc = Math.min(w, h) / 7.6;
-    ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(233,231,223,.12)"; ctx.beginPath();
-    for (let v = -3; v <= 3; v++) { ctx.moveTo(cx + v * sc, 0); ctx.lineTo(cx + v * sc, h); ctx.moveTo(0, cy - v * sc); ctx.lineTo(w, cy - v * sc); }
-    ctx.stroke();
+    const g = prep(curve), key = `${cv.width}|${cv.height}|${curve.width}|${curve.height}|${th}`;
+    if (key === drawn) return;
+    drawn = key;
+    // grade e pontos não mudam com o ângulo: ficam numa camada guardada
+    blit(ctx, base(cv, `${w}|${h}`, (b) => {
+      b.fillStyle = "#0c0d0d"; b.fillRect(0, 0, w, h);
+      b.strokeStyle = "rgba(233,231,223,.12)"; b.beginPath();
+      for (let v = -3; v <= 3; v++) { b.moveTo(cx + v * sc, 0); b.lineTo(cx + v * sc, h); b.moveTo(0, cy - v * sc); b.lineTo(w, cy - v * sc); }
+      b.stroke();
+      b.globalAlpha = 0.5;
+      for (let k = 0; k < S.length; k++) {
+        b.fillStyle = GC[GRP[S[k]]];
+        b.fillRect(cx + X[k] * sc - 1.3, cy - Y[k] * sc - 1.3, 2.6, 2.6);
+      }
+      b.globalAlpha = 1;
+    }));
     const ux = Math.cos(th), uy = Math.sin(th);
-    // pontos e ligações até a reta
-    ctx.globalAlpha = 0.5;
-    for (let k = 0; k < S.length; k++) {
-      ctx.fillStyle = GC[GRP[S[k]]];
-      ctx.fillRect(cx + X[k] * sc - 1.3, cy - Y[k] * sc - 1.3, 2.6, 2.6);
-    }
+    // ligações até a reta
     ctx.globalAlpha = 0.18; ctx.strokeStyle = "#fff"; ctx.beginPath();
     for (let k = 0; k < S.length; k += 9) {
       const s = X[k] * ux + Y[k] * uy;
@@ -591,12 +667,12 @@ function initEigen() {
     }
     ctx.lineWidth = 1;
     const v = varAt(th);
-    angEl.textContent = `θ = ${Math.round((th * 180) / Math.PI) % 180}°`;
-    varEl.textContent = `${nf(v, 2)} / λ₁ = ${nf(lam1, 2)}`;
-    btn.textContent = near ? `λ₁ = ${nf(lam1, 2)} · λ₂ = ${nf(lam2, 2)}` : "▶ ACHAR PC1";
+    setText(angEl, `θ = ${Math.round((th * 180) / Math.PI) % 180}°`);
+    setText(varEl, `${nf(v, 2)} / λ₁ = ${nf(lam1, 2)}`);
+    setText(btn, near ? `λ₁ = ${nf(lam1, 2)} · λ₂ = ${nf(lam2, 2)}` : "▶ ACHAR PC1");
 
     // curva Var(θ)
-    const g = prep(curve), cw = g.w, ch = g.h, x2 = g.ctx;
+    const cw = g.w, ch = g.h, x2 = g.ctx;
     x2.fillStyle = "#0c0d0d"; x2.fillRect(0, 0, cw, ch);
     const vy = (val) => ch - 14 - (val / (lam1 * 1.1)) * (ch - 28);
     x2.strokeStyle = "rgba(233,231,223,.8)"; x2.lineWidth = 1.5; x2.beginPath();
@@ -745,17 +821,26 @@ function initMap() {
   list.addEventListener("mousedown", (e) => { const li = e.target.closest("li"); if (li) { select(+li.dataset.i); input.value = P.nome[+li.dataset.i]; hits = []; render(); } });
   input.addEventListener("blur", () => setTimeout(() => { hits = []; render(); }, 150));
 
+  const osd = $("#map-osd"), base = layerCache();
+  let gen = 0;
   loop(cv, (now) => {
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     t += clamp(target - t, -dt / 1.6, dt / 1.6);
+    if (Math.abs(target - t) < 1e-6) t = target;
     screen.classList.toggle("campo", t < 0.5);
-    $("#map-osd").textContent = t < 0.5 ? "CAMPO · POSIÇÃO DE ORIGEM" : "MAPA · PC1 × PC2";
+    setText(osd, t < 0.5 ? "CAMPO · POSIÇÃO DE ORIGEM" : "MAPA · PC1 × PC2");
     const { ctx, w, h } = prep(cv);
     L = layout(w, h, { top: 46, bottom: 34, side: 28 });
-    ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
-    drawPitch(ctx, L.field, 1 - t * 1.4);
-    drawMapAxes(ctx, L.map, t * 1.4 - 0.4);
-    drawPlayers(ctx, L, t, { size: w < 600 ? 1.5 : 2, alpha: 0.55, filter, sx: SX, sy: SY });
+    const paint = (c) => {
+      c.fillStyle = "#0c0d0d"; c.fillRect(0, 0, w, h);
+      drawPitch(c, L.field, 1 - t * 1.4);
+      drawMapAxes(c, L.map, t * 1.4 - 0.4);
+      drawPlayers(c, L, t, { size: w < 600 ? 1.5 : 2, alpha: 0.55, filter, sx: SX, sy: SY });
+    };
+    // com os pontos parados, os 18 mil ficam numa camada guardada; por frame só vão o pulso e o hover
+    // (gen invalida a camada depois de uma transição, que reescreve SX/SY)
+    if (t === target) blit(ctx, base(cv, `${w}|${h}|${t}|${filter}|${gen}`, paint));
+    else { gen++; paint(ctx); }
 
     // destaques com nome (só no mapa assentado)
     const la = clamp((t - 0.8) * 5, 0, 1);
@@ -803,7 +888,7 @@ function initVariance() {
   $("#var-80").textContent = `k = ${kAt(0.8)}`;
   $("#var-90").textContent = `k = ${kAt(0.9)}`;
   const cv = $("#var-canvas"), slider = $("#var-slider");
-  let k = 2, t0 = null;
+  let k = 2, t0 = null, drawn = "";
   const upd = () => {
     k = +slider.value;
     $("#var-k").textContent = `k = ${k}`; $("#var-k2").textContent = k; $("#var-pct").textContent = pct(cum[k - 1]);
@@ -813,6 +898,9 @@ function initVariance() {
     if (t0 === null) t0 = now;
     const t = REDUCE ? 1 : clamp((now - t0) / 1600, 0, 1);
     const { ctx, w, h } = prep(cv), L = 40, Rt = w - 44, top = 46, bot = h - 34, n = R.length;
+    const key = `${cv.width}|${cv.height}|${t}|${k}`;
+    if (key === drawn) return;
+    drawn = key;
     const bw = (Rt - L) / n, ymax = 0.6;
     ctx.fillStyle = "#0c0d0d"; ctx.fillRect(0, 0, w, h);
     ctx.font = "14px VT323, monospace"; ctx.fillStyle = "rgba(233,231,223,.5)"; ctx.strokeStyle = "rgba(233,231,223,.1)";

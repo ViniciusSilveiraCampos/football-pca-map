@@ -68,7 +68,7 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ---------------------------------------------------------- HEADER ---- */
-.top { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+.top { position: sticky; top: 0; z-index: 40; background: var(--paper); border-bottom: 1px solid var(--rule); }
 .top-row, .tabs { max-width: var(--max); margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
 .top-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 12px; padding-bottom: 8px; }
 .brand { display: flex; align-items: baseline; gap: 14px; }
@@ -82,7 +82,7 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 .tabs a:hover, .tabs a.on { color: var(--ink); }
 .tabs a.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--accent); }
 .tape { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
-#tape-bar { height: 100%; width: 0; background: var(--accent); }
+#tape-bar { height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; will-change: transform; }
 
 /* ---------------------------------------------------------- SEÇÕES ---- */
 .ch { padding: 72px 0 40px; border-bottom: 1px solid var(--hair); }
@@ -203,8 +203,8 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 /* o nome fica fixo enquanto as colunas deslizam */
 .raw-head span:nth-child(2), .raw-row span:nth-child(2) { position: sticky; left: 0; z-index: 1; padding-left: 10px; background: var(--scr); box-shadow: 10px 0 10px -8px rgba(0,0,0,.9); }
 .raw-row:nth-child(odd) span:nth-child(2) { background: #131414; }
-.raw-roll { animation: roll 60s linear infinite; }
-.raw-screen:hover .raw-roll { animation-play-state: paused; }
+.raw-roll { animation: roll 60s linear infinite; will-change: transform; }
+.raw-screen:hover .raw-roll, .raw-screen.paused .raw-roll { animation-play-state: paused; }
 @keyframes roll { to { transform: translateY(-50%); } }
 .raw-row { font-family: var(--vhs); font-size: 17px; line-height: 22px; color: var(--scr-ink); }
 .raw-row:nth-child(odd) { background: rgba(255,255,255,.025); }
@@ -243,6 +243,7 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 .pos-node .ring { fill: none; stroke: #fff; stroke-width: .5; opacity: 0; }
 .pos-node.on .ring { opacity: 1; stroke-dasharray: 1.4 1; animation: spin 6s linear infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.pitch-screen.paused .pos-node .ring { animation-play-state: paused; }
 .pitch-screen.dim .pos-node:not(.on) circle.dot { opacity: .35; }
 .pos-panel { border-top: 3px solid var(--ink); padding-top: 10px; }
 .pos-panel .code { font-family: var(--cut); font-size: 72px; line-height: .9; }
@@ -307,7 +308,8 @@ button { font: inherit; cursor: pointer; letter-spacing: .12em; text-transform: 
 .list.team li { grid-template-columns: 150px minmax(0, 1fr); }
 
 /* ----------------------------------------------------- 06 AUTOVETOR ---- */
-#eig-canvas { cursor: grab; touch-action: none; }
+/* pan-y: no celular, deslizar na vertical rola a página em vez de prender o dedo no canvas */
+#eig-canvas { cursor: grab; touch-action: pan-y; }
 #eig-canvas:active { cursor: grabbing; }
 .meter .screen { border: 1px solid var(--rule); }
 .axis { display: flex; justify-content: space-between; margin-top: 6px; }
