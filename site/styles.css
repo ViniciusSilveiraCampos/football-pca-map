@@ -411,6 +411,91 @@ canvas.h140 { height: 140px; }
 .lims b { color: var(--ink); font-weight: 500; }
 .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 18px; padding-bottom: 28px; }
 
+/* ---------------------------------------------- MODO APRESENTAÇÃO ---- */
+/* body.present: um capítulo por tela, sem rolagem. Só a seção .cur aparece; o visual
+   principal de cada capítulo cresce até o espaço que sobra (container queries medem esse
+   espaço). Nada de transform/zoom: as coordenadas de mouse dos canvas continuam certas. */
+.present-btn { background: transparent; color: var(--ink); border: 1px solid var(--rule); padding: 4px 10px; font-size: 10.5px; }
+.present-btn:hover, body.present .present-btn { background: var(--ink); color: var(--paper); }
+.deck-only { display: none; }
+body.present .deck-only { display: inline-flex; }
+#deck-count { color: var(--accent); font-size: 20px; line-height: 1; }
+.deck-nav { position: fixed; right: 16px; bottom: 14px; z-index: 50; gap: 0; border: 1px solid var(--rule); background: var(--paper); opacity: .35; transition: opacity .2s; }
+.deck-nav:hover, .deck-nav:focus-within { opacity: 1; }
+.deck-nav button { background: transparent; border: 0; color: var(--ink); padding: 6px 12px; font-size: 13px; }
+.deck-nav button + button { border-left: 1px solid var(--rule); }
+.deck-nav button:hover { background: var(--ink); color: var(--paper); }
+
+body.present { overflow: hidden; --max: 1600px; }
+body.present .foot { display: none; }
+body.present main { position: fixed; top: var(--bar, 88px); left: 0; right: 0; bottom: 0; }
+body.present .ch { display: none; height: 100%; padding: 18px 0 16px; border: 0; overflow-y: auto; }
+body.present .ch.cur { display: block; }
+body.present .ch > .wrap { height: 100%; display: flex; flex-direction: column; }
+body.present .guia, body.present .hero .lede,
+body.present #dados .wrap > .block:has(.papeis),
+body.present #mapa .map-wrap ~ .grid2 { display: none; }
+body.present .ph { flex: none; padding-bottom: 10px; }
+body.present .ph-kicker { margin-bottom: 6px; }
+body.present .ph h1 { font-size: clamp(36px, 7.5vh, 96px); }
+body.present .ph h1 br { display: none; }
+body.present .ph-side { font-size: clamp(16px, 2.2vh, 26px); }
+body.present .ph-desc { flex: none; max-width: 980px; margin-top: 10px; }
+body.present .block { margin-top: 18px; }
+
+@media (min-width: 901px) {
+  /* a grade principal de cada capítulo ocupa o resto da tela */
+  body.present .ch .grid2.block, body.present .pitch-wrap, body.present .map-wrap {
+    flex: 1; min-height: 0; container-type: size; grid-template-rows: 100%;
+  }
+  body.present .grid2.block > div, body.present .pos-panel, body.present .player { max-height: 100%; overflow: auto; }
+  body.present .grid2.block > .screen, body.present .pitch-screen, body.present .map-screen { height: 100%; align-self: stretch; }
+  body.present canvas.h360 { height: 100%; }
+  body.present .raw-screen { height: 100%; }
+  /* canvas quadrados: o lado é limitado pela altura disponível */
+  body.present .grid2.block:has(canvas.sq) { grid-template-columns: auto minmax(0, 1fr); }
+  body.present .grid2.block > .screen:has(canvas.sq) { width: min(100cqh, 58cqw); height: auto; aspect-ratio: 1; align-self: start; }
+  body.present .screen canvas.sq { width: 100%; height: 100%; }
+  body.present .grid2.block > div .formula:first-child { margin-top: 9px; }
+
+  /* 00 início */
+  body.present .hero { padding-top: 14px; }
+  body.present .title { font-size: clamp(44px, 10vh, 150px); margin-top: 8px; }
+  body.present .hero-sub { grid-template-columns: 1fr; margin: 10px 0 14px; }
+  body.present .tagline { font-size: clamp(22px, 3.6vh, 42px); }
+  body.present .hero-screen { flex: 1; min-height: 0; height: auto; }
+  body.present .kpis { margin-top: 14px; }
+  body.present .kpis .m .v { font-size: clamp(26px, 4.6vh, 52px); }
+  body.present .pipeline { margin-top: 16px; }
+  body.present .pipeline .bh { margin-bottom: 0; border-bottom: 0; }
+
+  /* 02 campo */
+  body.present .pitch-screen { display: grid; place-items: center; }
+  body.present .pitch-screen svg { width: 100%; height: 100%; }
+  body.present .groups { margin-top: 14px; flex: none; }
+  body.present .groups .v { font-size: clamp(24px, 4vh, 44px); }
+
+  /* 03 limpeza */
+  body.present .convs { flex: none; }
+  body.present .conv { min-height: 0; }
+  body.present .ch#limpeza .grid2.block { flex: none; container-type: normal; grid-template-rows: auto; }
+
+  /* 07 projeção: a lista dos 37 termos rola por dentro e a soma fica fixa embaixo */
+  body.present #projecao .formula.block { flex: none; padding-top: 20px; padding-bottom: 8px; }
+  body.present #projecao .fx.big { font-size: clamp(20px, 3vh, 32px); }
+  body.present .proj-ctrl { flex: none; margin-top: 16px; }
+  body.present .proj { flex: 1; min-height: 0; overflow: auto; margin-top: 14px; }
+  body.present .prow.head { position: sticky; top: 0; z-index: 1; background: var(--paper); }
+  body.present .proj-sum { position: sticky; bottom: 0; margin-top: 8px; }
+
+  /* 08 mapa */
+  body.present .map-ctrl { flex: none; margin-top: 14px; }
+  body.present .map-wrap { margin-top: 12px; }
+
+  /* 11 fim */
+  body.present .ch.fim .grid2.block { flex: none; container-type: normal; grid-template-rows: auto; }
+}
+
 /* ------------------------------------------------------ RESPONSIVO ---- */
 @media (max-width: 1000px) {
   .pipeline ol { grid-template-columns: repeat(4, minmax(0, 1fr)); }

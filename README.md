@@ -109,6 +109,7 @@ uv sync                              # cria .venv e instala tudo
 uv run football-pca-map download     # baixa data/raw/data.csv do Kaggle (sem login)
 uv run football-pca-map analyze      # EDA + mapa + experimentos E1–E4 → outputs/
 uv run football-pca-map gifs         # animações dos gráficos → docs/img/
+uv run football-pca-map site         # dados do site de apresentação → site/data.js (abra site/index.html)
 uv run task app                      # protótipo em http://localhost:8501
 ```
 
@@ -271,6 +272,7 @@ treina o PCA e os classificadores (~25 s); depois, cada interação leva menos d
 | Material | Link |
 |---|---|
 | 🖥️ Aplicação web | local: `uv run task app` · deploy público _a publicar_ |
+| 🌐 Site de apresentação | [football-pca-map.viniciussc.com](https://football-pca-map.viniciussc.com) · deploy em [`deploy/`](deploy/README.md) |
 | 🎬 Vídeo (1–3 min) | _a publicar_ |
 | 📄 Resumo expandido | [`artigo/main.tex`](artigo/main.tex) (PDF gerado pelo CI na `main`) |
 | 📰 Folder | _a publicar_ |

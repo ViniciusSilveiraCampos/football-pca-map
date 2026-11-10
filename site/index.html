@@ -18,6 +18,8 @@
       </a>
       <div class="top-meta">
         <span class="lbl" id="chapter-name">00 INÍCIO</span>
+        <span class="vt deck-only" id="deck-count">01 / 12</span>
+        <button class="present-btn" id="present-btn" type="button" title="Modo apresentação (P)">▶ APRESENTAR</button>
       </div>
     </div>
     <nav class="tabs" id="tabs"></nav>
@@ -80,7 +82,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 01</span><span class="lbl muted">FIFA 19 COMPLETE PLAYER DATASET · KAGGLE</span></div>
-            <h1>O CSV<br>bruto</h1>
+            <h1>O CSV <br>bruto</h1>
           </div>
           <div class="ph-side"><b data-num="brutas">18.207</b>linhas × <span data-num="colunas">88</span> colunas</div>
         </div>
@@ -150,7 +152,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 02</span><span class="lbl muted">O RÓTULO QUE O MODELO TENTA ACERTAR</span></div>
-            <h1>Os dados<br>no campo</h1>
+            <h1>Os dados <br>no campo</h1>
           </div>
           <div class="ph-side"><b>27</b>posições → 4 grupos</div>
         </div>
@@ -311,7 +313,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 06</span><span class="lbl muted">A INTUIÇÃO EM 2 DIMENSÕES</span></div>
-            <h1>A direção<br>que mais varia</h1>
+            <h1>A direção <br>que mais varia</h1>
           </div>
           <div class="ph-side"><b class="nt">C v = λ v</b>autovetores</div>
         </div>
@@ -354,7 +356,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 07</span><span class="lbl muted">pipeline.transform()</span></div>
-            <h1>37 notas<br>viram 2</h1>
+            <h1>37 notas <br>viram 2</h1>
           </div>
           <div class="ph-side"><b id="proj-result">—</b><span id="proj-who">—</span></div>
         </div>
@@ -439,7 +441,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 09</span><span class="lbl muted">EXPERIMENTO E2</span></div>
-            <h1>Quanto<br>sobra?</h1>
+            <h1>Quanto <br>sobra?</h1>
           </div>
           <div class="ph-side"><b id="var-k" class="nt">k = 2</b><span id="var-pct">66,0%</span></div>
         </div>
@@ -478,7 +480,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 10</span><span class="lbl muted">EXPERIMENTO E3 · REGRESSÃO LOGÍSTICA</span></div>
-            <h1>Adivinhe<br>a posição</h1>
+            <h1>Adivinhe <br>a posição</h1>
           </div>
           <div class="ph-side"><b id="clf-best">0,881</b>F1 com k = 10</div>
         </div>
@@ -515,7 +517,7 @@
         <div class="ph">
           <div>
             <div class="ph-kicker"><span class="vt">CAP 11</span><span class="lbl muted">LEIA ANTES DE USAR</span></div>
-            <h1>Fim da<br>fita</h1>
+            <h1>Fim da <br>fita</h1>
           </div>
           <div class="ph-side"><b>⏏ EJECT</b>17/11/2026</div>
         </div>
@@ -549,6 +551,12 @@
     <span class="lbl">FACULDADES INTEGRADAS DE BAURU · CIÊNCIA DA COMPUTAÇÃO · 2026</span>
     <span class="lbl muted">DADOS: FIFA 19 · KAGGLE/JAVAGARM · CC BY-NC-SA 4.0</span>
   </footer>
+
+  <nav class="deck-nav deck-only" aria-label="Navegação dos slides">
+    <button type="button" id="deck-prev" title="Slide anterior (←)">◀</button>
+    <button type="button" id="deck-fs" title="Tela cheia (F)">⛶</button>
+    <button type="button" id="deck-next" title="Próximo slide (→)">▶</button>
+  </nav>
 
   <script src="data.js" defer></script>
   <script src="app.js" defer></script>

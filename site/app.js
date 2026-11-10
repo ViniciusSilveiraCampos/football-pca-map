@@ -12,6 +12,7 @@ const N = P.nome.length;
 const GROUPS = ["Goleiro", "Defensor", "Meio-campo", "Atacante"];
 const GC = ["#8b7bff", "#2fd197", "#ffbf1f", "#ff5f5c"];
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let PRESENT = false; // modo apresentação (um capítulo por tela)
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -275,7 +276,7 @@ function initHeader() {
   // barra de progresso da leitura: só recalcula quando há scroll ou a página muda de tamanho
   const bar = $("#tape-bar");
   let max = 0, pending = false;
-  const paint = () => { pending = false; bar.style.transform = `scaleX(${max > 0 ? clamp(scrollY / max, 0, 1) : 0})`; };
+  const paint = () => { pending = false; if (PRESENT) return; bar.style.transform = `scaleX(${max > 0 ? clamp(scrollY / max, 0, 1) : 0})`; };
   const req = () => { if (!pending) { pending = true; requestAnimationFrame(paint); } };
   const measure = () => { max = document.documentElement.scrollHeight - innerHeight; req(); };
   addEventListener("scroll", req, { passive: true });
@@ -728,6 +729,12 @@ function initProjection() {
       }
       sum += rows[k].p;
       els[k].classList.add("on", "cur");
+      // no modo apresentação a lista rola por dentro: mantém a linha atual à vista
+      // (sem scrollIntoView, que rolaria a página no modo normal)
+      if (box.scrollHeight > box.clientHeight) {
+        const r = els[k].offsetTop - box.offsetTop, h = els[k].offsetHeight;
+        if (r < box.scrollTop + 40 || r + h > box.scrollTop + box.clientHeight - 90) box.scrollTop = r - box.clientHeight / 2;
+      }
       $("#proj-tot").textContent = sgn(sum);
       $("#proj-run").textContent = `${k + 1} de ${rows.length} termos`;
       k++;
@@ -962,8 +969,109 @@ function initClassifier() {
   onSeen(bars, () => $$(".f", bars).forEach((b, i) => setTimeout(() => { b.style.width = b.dataset.w + "%"; }, i * 120)));
 }
 
+/* ============================================== MODO APRESENTAÇÃO ===== */
+function initPresent() {
+  const sections = $$("section.ch"), n = sections.length, header = $(".top"), btn = $("#present-btn");
+  const count = $("#deck-count"), bar = $("#tape-bar");
+  let cur = 0;
+  const pad = (i) => String(i).padStart(2, "0");
+  // altura da barra do topo, para a seção ocupar exatamente o resto da tela
+  new ResizeObserver(() => document.documentElement.style.setProperty("--bar", header.offsetHeight + "px")).observe(header);
+
+  function show(i) {
+    cur = clamp(i, 0, n - 1);
+    const s = sections[cur];
+    sections.forEach((x, k) => x.classList.toggle("cur", k === cur));
+    s.scrollTop = 0;
+    $$("#tabs a").forEach((a) => a.classList.toggle("on", a.dataset.id === s.id));
+    $("#chapter-name").textContent = `${pad(cur)} ${s.dataset.name}`;
+    count.textContent = `${pad(cur + 1)} / ${pad(n)}`;
+    bar.style.transform = `scaleX(${n > 1 ? cur / (n - 1) : 1})`;
+    history.replaceState(null, "", `${location.pathname}${location.search}#${s.id}`);
+    const tabs = $("#tabs"), on = $(`#tabs a[data-id="${s.id}"]`);
+    if (on && tabs.scrollWidth > tabs.clientWidth) tabs.scrollLeft = on.offsetLeft - (tabs.clientWidth - on.offsetWidth) / 2;
+  }
+  function inView() {
+    // capítulo que está no meio da tela no modo rolagem
+    const mid = innerHeight / 2;
+    const k = sections.findIndex((s) => { const r = s.getBoundingClientRect(); return r.top <= mid && r.bottom > mid; });
+    return k < 0 ? 0 : k;
+  }
+  function enter(i = inView()) {
+    PRESENT = true;
+    document.body.classList.add("present");
+    btn.textContent = "✕ SAIR";
+    show(i);
+  }
+  function exit() {
+    PRESENT = false;
+    document.body.classList.remove("present");
+    sections.forEach((x) => x.classList.remove("cur"));
+    btn.textContent = "▶ APRESENTAR";
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    sections[cur].scrollIntoView({ behavior: "auto" });
+    dispatchEvent(new Event("scroll"));
+  }
+  const toggleFs = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
+  btn.addEventListener("click", () => (PRESENT ? exit() : enter()));
+  $("#deck-prev").addEventListener("click", () => show(cur - 1));
+  $("#deck-next").addEventListener("click", () => show(cur + 1));
+  $("#deck-fs").addEventListener("click", toggleFs);
+
+  // links internos (abas, pipeline, logo) trocam de slide em vez de rolar
+  document.addEventListener("click", (e) => {
+    if (!PRESENT) return;
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const k = sections.findIndex((s) => `#${s.id}` === a.getAttribute("href"));
+    if (k >= 0) { e.preventDefault(); show(k); }
+  });
+
+  addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t.matches?.("input, textarea, select, [contenteditable]")) return;
+    const k = e.key;
+    if (k === "p" || k === "P") { e.preventDefault(); PRESENT ? exit() : enter(); return; }
+    if (!PRESENT) return;
+    if (k === " " && t.matches?.("button")) return;
+    if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(k)) show(cur + 1);
+    else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(k)) show(cur - 1);
+    else if (k === "Home") show(0);
+    else if (k === "End") show(n - 1);
+    else if (k === "f" || k === "F") toggleFs();
+    else if (k === "Escape" && !document.fullscreenElement) exit();
+    else return;
+    e.preventDefault();
+  });
+
+  // deslizar para o lado no celular (fora dos canvas, que têm gestos próprios)
+  let sx = null, sy = 0;
+  addEventListener("touchstart", (e) => {
+    if (!PRESENT || e.touches.length !== 1 || e.target.closest("canvas, .raw-scroll, input")) { sx = null; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  addEventListener("touchend", (e) => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    sx = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(cur + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  // ?apresentar abre direto no modo, no capítulo do hash (se houver)
+  if (new URLSearchParams(location.search).has("apresentar")) {
+    const k = sections.findIndex((s) => `#${s.id}` === location.hash);
+    enter(k >= 0 ? k : 0);
+  }
+}
+
 /* ============================================================ INÍCIO ===== */
 initHeader();
+initPresent();
 fillNumbers();
 initHero();
 initRaw();
