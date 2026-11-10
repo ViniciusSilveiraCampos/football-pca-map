@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix, f1_score
+from sklearn.pipeline import Pipeline
 
 from football_pca_map.data import FEATURES, GROUP_ORDER, RAW_PATH
 from football_pca_map.model import (
@@ -28,6 +29,8 @@ log = logging.getLogger(__name__)
 SITE_DATA = Path("site/data.js")
 TARGET = "PositionGroup"
 CLASSIFIER_KS = [1, 2, 3, 5, 10, 20, None]
+# Classificadores exportados com os pesos (None = 37 atributos, sem PCA).
+DEMO_KS = [None, 2, 10]
 # Jogadores destacados no mapa e na apresentação.
 HIGHLIGHTS = [
     "L. Messi",
@@ -74,6 +77,39 @@ def _classifiers(train: pd.DataFrame, test: pd.DataFrame) -> list[dict]:
     return rows
 
 
+def _rounded(values: np.ndarray) -> list:
+    return np.asarray(values, dtype=float).round(6).tolist()
+
+
+def position_model(pipe: Pipeline) -> dict:
+    """Pesos de um `classifier_pipeline` já ajustado, para o site prever no navegador.
+
+    Probabilidades = softmax(h · coefᵀ + intercepto), com z = (x − média) / desvio e
+    h = (z − pca_media) · pcaᵀ (ou h = z sem PCA). A média e o desvio são os do scaler
+    do próprio pipeline.
+    """
+    scaler, clf = pipe.named_steps["scaler"], pipe.named_steps["clf"]
+    pca = pipe.named_steps.get("pca")
+    return {
+        "k": int(pca.n_components_) if pca is not None else len(scaler.mean_),
+        "media": _rounded(scaler.mean_),
+        "desvio": _rounded(scaler.scale_),
+        "pca": _rounded(pca.components_) if pca is not None else None,
+        "pca_media": _rounded(pca.mean_) if pca is not None else None,
+        "coef": _rounded(clf.coef_),
+        "intercepto": _rounded(clf.intercept_),
+        "classes": [GROUP_ORDER.index(c) for c in clf.classes_],
+    }
+
+
+def _position_models(train: pd.DataFrame) -> list[dict]:
+    """Classificadores usados no capítulo "Crie seu jogador" (k = 2, 10 e 37 atributos)."""
+    return [
+        position_model(classifier_pipeline(k).fit(train[FEATURES], train[TARGET]))
+        for k in DEMO_KS
+    ]
+
+
 def build(raw: pd.DataFrame, players: pd.DataFrame) -> dict:
     train, test = split(players)
     pipe = fit_map(train, FEATURES)
@@ -104,6 +140,7 @@ def build(raw: pd.DataFrame, players: pd.DataFrame) -> dict:
         "autovalores": eigen.round(3).tolist(),
         "correlacao": corr.round(2).tolist(),
         "classificador": _classifiers(train, test),
+        "modelos": _position_models(train),
         "destaques": [n for n in HIGHLIGHTS if n in names],
         # Colunas paralelas (formato compacto): um item por jogador.
         "jogadores": {

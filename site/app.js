@@ -969,6 +969,196 @@ function initClassifier() {
   onSeen(bars, () => $$(".f", bars).forEach((b, i) => setTimeout(() => { b.style.width = b.dataset.w + "%"; }, i * 120)));
 }
 
+/* ================================================= 11 CRIE SEU JOGADOR == */
+// Jogadores inventados ficam numa lista própria (CUSTOM), nunca em P: não entram em
+// contagens, busca, vizinhos de outros capítulos nem em nenhuma conta da base.
+// Eles só passam pelas mesmas contas de transform/predict, com os pesos do treino.
+const ATTR_GROUPS = {
+  Ataque: ["Finishing", "Positioning", "ShotPower", "LongShots", "Volleys", "Penalties", "HeadingAccuracy"],
+  "Técnica e passe": ["BallControl", "Dribbling", "ShortPassing", "LongPassing", "Crossing", "Curve", "FKAccuracy", "Vision", "Composure"],
+  Físico: ["Acceleration", "SprintSpeed", "Agility", "Balance", "Reactions", "Jumping", "Stamina", "Strength"],
+  Defesa: ["Marking", "StandingTackle", "SlidingTackle", "Interceptions", "Aggression"],
+  Goleiro: ["GKDiving", "GKHandling", "GKKicking", "GKPositioning", "GKReflexes"],
+  "Corpo e fama": ["HeightCm", "WeightKg", "International Reputation"],
+};
+const ATTR_RANGE = { HeightCm: [150, 210], WeightKg: [50, 115], "International Reputation": [1, 5] };
+const STORE_KEY = "football-pca-map:criados";
+
+// probabilidade de cada grupo (na ordem de GROUPS) para um classificador exportado por site.py
+function predictProba(m, x) {
+  let h = x.map((v, j) => (v - m.media[j]) / m.desvio[j]);
+  if (m.pca) {
+    const c = h.map((v, j) => v - m.pca_media[j]);
+    h = m.pca.map((row) => row.reduce((s, w, j) => s + w * c[j], 0));
+  }
+  const logits = m.coef.map((row, i) => row.reduce((s, w, j) => s + w * h[j], m.intercepto[i]));
+  const top = Math.max(...logits), ex = logits.map((l) => Math.exp(l - top)), tot = ex.reduce((a, b) => a + b, 0);
+  const out = [0, 0, 0, 0];
+  m.classes.forEach((g, i) => { out[g] = ex[i] / tot; });
+  return out;
+}
+const projectPC = (x) => {
+  const z = x.map((v, j) => (v - D.media[j]) / D.desvio[j]);
+  return D.loadings.map((w) => w.reduce((s, wj, j) => s + wj * z[j], 0));
+};
+const argmax = (a) => a.reduce((b, v, i) => (v > a[b] ? i : b), 0);
+
+function initCreate() {
+  const cv = $("#create-canvas"), side = $(".cr-side");
+  if (!cv || !side) return;
+  const models = (D.modelos || []).slice().sort((a, b) => b.k - a.k); // 37, 10, 2
+  const label = (m) => (m.pca ? `PCA k = ${m.k}` : `${m.k} atributos`);
+
+  // perfil médio real de cada grupo (para os atalhos e o Prof. Ronaldo)
+  const PRESETS = GROUPS.map((_, g) => {
+    const s = new Array(F.length).fill(0), idx = BY_GROUP[g];
+    idx.forEach((i) => P.atributos[i].forEach((v, j) => { s[j] += v; }));
+    return s.map((v) => Math.round(v / idx.length));
+  });
+  const POS_GROUP = {};
+  P.posicao.forEach((c, i) => { if (POS_GROUP[c] === undefined) POS_GROUP[c] = GRP[i]; });
+
+  const cur = { attrs: [...PRESETS[3]] };
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(STORE_KEY) || "[]").filter((c) => Array.isArray(c.attrs) && c.attrs.length === F.length); } catch { custom = []; }
+  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(custom)); } catch { /* sem armazenamento: fica só na sessão */ } };
+
+  // formulário
+  const posSel = $("#cr-pos");
+  posSel.innerHTML = Object.keys(POS).map((c) => `<option value="${c}"${c === "ST" ? " selected" : ""}>${c} · ${POS[c][2]}</option>`).join("");
+  $("#cr-presets").innerHTML = ["Atacante", "Meio-campo", "Defensor", "Goleiro"].map((g) =>
+    `<button type="button" data-g="${GROUPS.indexOf(g)}" class="${g === "Atacante" ? "on" : ""}">${g}</button>`).join("");
+  const box = $("#cr-attrs");
+  box.innerHTML = Object.entries(ATTR_GROUPS).map(([name, feats]) =>
+    `<details${name === "Ataque" ? " open" : ""}><summary class="lbl">${name}</summary>`
+    + feats.map((f) => {
+      const j = fi(f), [lo, hi] = ATTR_RANGE[f] || [1, 99];
+      return `<label class="cr-row"><span class="n" title="${esc(f)}">${esc(PT[f] || f)}</span>`
+        + `<input type="range" min="${lo}" max="${hi}" step="1" value="${cur.attrs[j]}" data-j="${j}"><span class="v vt" data-v="${j}">${cur.attrs[j]}</span></label>`;
+    }).join("") + `</details>`).join("");
+  const sliders = $$("input[type=range]", box);
+  const syncSliders = () => sliders.forEach((s) => { const j = +s.dataset.j; s.value = cur.attrs[j]; $(`[data-v="${j}"]`, box).textContent = cur.attrs[j]; });
+
+  // resultado ao vivo
+  const pred = $("#cr-pred"), near = $("#cr-near"), coordsEl = $("#cr-coords");
+  let Z = null; // base padronizada, calculada só na primeira vez que precisa
+  function nearest(x, n = 5) {
+    if (!Z) {
+      Z = new Float32Array(N * F.length);
+      for (let i = 0; i < N; i++) for (let j = 0; j < F.length; j++) Z[i * F.length + j] = zOf(i, j);
+    }
+    const z = x.map((v, j) => (v - D.media[j]) / D.desvio[j]), best = [];
+    for (let i = 0; i < N; i++) {
+      let d = 0;
+      for (let j = 0; j < F.length; j++) { const t = Z[i * F.length + j] - z[j]; d += t * t; }
+      if (best.length < n || d < best[best.length - 1][1]) {
+        best.push([i, d]); best.sort((a, b) => a[1] - b[1]); if (best.length > n) best.pop();
+      }
+    }
+    return best;
+  }
+  let pending = false;
+  function refresh() {
+    pending = false;
+    cur.pc = projectPC(cur.attrs);
+    cur.probs = models.map((m) => predictProba(m, cur.attrs));
+    const said = POS_GROUP[posSel.value], name = $("#cr-name").value.trim() || "Seu jogador";
+    setText(coordsEl, `PC1 ${sgn(cur.pc[0])} · PC2 ${sgn(cur.pc[1])}`);
+    if (models.length) {
+      const g = argmax(cur.probs[0]);
+      $("#cr-result").textContent = GROUPS[g];
+      $("#cr-result-who").textContent = `${name}, segundo o modelo`;
+      pred.innerHTML = `<div class="cr-said lbl">você diz: <b>${posSel.value} · ${GROUPS[said]}</b>${g === said ? " · o modelo concorda" : " · o modelo discorda"}</div>`
+        + models.map((m, k) => {
+          const p = cur.probs[k], gi = argmax(p);
+          return `<div class="cr-p"><span class="lbl">${label(m)}</span><span class="cr-g"><i style="background:${GC[gi]}"></i>${GROUPS[gi]}</span><span class="vt">${pct(p[gi], 1)}</span></div>`;
+        }).join("");
+    } else {
+      pred.innerHTML = `<p class="note">Rode <code>uv run football-pca-map site</code> para exportar os classificadores.</p>`;
+    }
+    near.innerHTML = nearest(cur.attrs).map(([i, d]) =>
+      `<li><span class="t">${esc(P.nome[i])} <span class="lbl muted">${P.posicao[i]} · ${P.overall[i]}</span></span><span class="lbl muted">d = ${nf(Math.sqrt(d), 2)}</span></li>`).join("");
+  }
+  const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(refresh); } };
+
+  box.addEventListener("input", (e) => {
+    const s = e.target.closest("input[type=range]"); if (!s) return;
+    const j = +s.dataset.j; cur.attrs[j] = +s.value;
+    $(`[data-v="${j}"]`, box).textContent = s.value;
+    $$("#cr-presets button").forEach((b) => b.classList.remove("on"));
+    schedule();
+  });
+  $("#cr-presets").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    cur.attrs = [...PRESETS[+b.dataset.g]];
+    $$("#cr-presets button").forEach((x) => x.classList.toggle("on", x === b));
+    syncSliders(); schedule();
+  });
+  posSel.addEventListener("change", schedule);
+  $("#cr-name").addEventListener("input", schedule);
+
+  // lista dos criados
+  const list = $("#cr-list");
+  function renderList() {
+    list.innerHTML = custom.map((c, k) =>
+      `<li><span class="t"><i style="background:${GC[c.g]}"></i>${esc(c.name)} <span class="lbl muted">${esc(c.pos)} · ${esc(c.club)}</span></span>`
+      + `<span class="lbl muted">${sgn(c.pc[0])} · ${sgn(c.pc[1])} <button type="button" data-k="${k}" title="Remover">✕</button></span></li>`).join("");
+    $("#cr-clear").disabled = !custom.length;
+  }
+  $("#cr-add").addEventListener("click", () => {
+    refresh();
+    const name = $("#cr-name").value.trim().slice(0, 28) || "Seu jogador";
+    const pc = cur.pc.map((v) => Math.round(v * 1000) / 1000);
+    custom.push({ name, club: $("#cr-club").value.trim().slice(0, 24) || "—", pos: posSel.value,
+      attrs: [...cur.attrs], pc, g: models.length ? argmax(cur.probs[0]) : POS_GROUP[posSel.value], t: Date.now() });
+    if (custom.length > 12) custom.shift();
+    save(); renderList();
+  });
+  list.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-k]"); if (!b) return;
+    custom.splice(+b.dataset.k, 1); save(); renderList();
+  });
+  $("#cr-clear").addEventListener("click", () => { custom = []; save(); renderList(); });
+  renderList();
+  refresh();
+
+  // mapa: base apagada numa camada guardada; prévia e criados por cima, a cada frame
+  const base = layerCache();
+  loop(cv, (now) => {
+    const { ctx, w, h } = prep(cv), L = layout(w, h, { top: 46, bottom: 34, side: 28 }), r = L.map;
+    blit(ctx, base(cv, `${w}|${h}`, (c) => {
+      c.fillStyle = "#0c0d0d"; c.fillRect(0, 0, w, h);
+      drawMapAxes(c, r, 1);
+      drawPlayers(c, L, 1, { size: w < 600 ? 1.3 : 1.7, alpha: 0.22 });
+    }));
+    const place = (pc) => [clamp(mapX(r, pc[0]), r.x + 6, r.x + r.w - 6), clamp(mapY(r, pc[1]), r.y + 6, r.y + r.h - 6)];
+    ctx.textAlign = "left";
+    // prévia (o que está nos sliders agora)
+    if (cur.pc) {
+      const [x, y] = place(cur.pc);
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.beginPath();
+      ctx.moveTo(x, r.y); ctx.lineTo(x, r.y + r.h); ctx.moveTo(r.x, y); ctx.lineTo(r.x + r.w, y); ctx.stroke();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+      ctx.font = "16px VT323, monospace"; ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.fillText("PRÉVIA", x + 13, y + 18);
+    }
+    // jogadores criados, em destaque
+    const last = custom.length - 1;
+    custom.forEach((c, k) => {
+      const [x, y] = place(c.pc);
+      if (k === last && !REDUCE) {
+        const t = (now / 1200) % 1;
+        ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - t)})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 10 + t * 22, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1;
+      }
+      ctx.fillStyle = GC[c.g]; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.stroke(); ctx.lineWidth = 1;
+      ctx.font = "22px VT323, monospace"; ctx.fillStyle = "#fff";
+      const tx = x > r.x + r.w * 0.75 ? x - 14 - ctx.measureText(c.name.toUpperCase()).width : x + 14;
+      ctx.fillText(c.name.toUpperCase(), tx, y - 10);
+    });
+  });
+}
+
 /* ============================================== MODO APRESENTAÇÃO ===== */
 function initPresent() {
   const sections = $$("section.ch"), n = sections.length, header = $(".top"), btn = $("#present-btn");
@@ -1084,4 +1274,5 @@ initProjection();
 initMap();
 initVariance();
 initClassifier();
+initCreate();
 requestAnimationFrame(frame);

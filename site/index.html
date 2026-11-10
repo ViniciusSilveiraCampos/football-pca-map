@@ -511,12 +511,60 @@
       </div>
     </section>
 
-    <!-- ================================================== 11 FIM -->
+    <!-- ================================================== 11 CRIE SEU JOGADOR -->
+    <section class="ch" id="criar" data-name="CRIE SEU JOGADOR">
+      <div class="wrap">
+        <div class="ph">
+          <div>
+            <div class="ph-kicker"><span class="vt">CAP 11</span><span class="lbl muted">DEMO CHALLENGE · FORA DA BASE</span></div>
+            <h1>Crie seu <br>jogador</h1>
+          </div>
+          <div class="ph-side"><b id="cr-result">—</b><span id="cr-result-who">segundo o modelo</span></div>
+        </div>
+        <p class="ph-desc">Invente um jogador, ajuste as 37 notas e veja onde ele cai no mapa e que posição o modelo dá para ele.
+          Nada é retreinado: o jogador novo passa só por <code>transform</code> e fica guardado à parte, sem entrar na base.</p>
+
+        <div class="guia">
+          <div><span class="lbl">① ENTRA</span><p>as 37 notas que você escolher. Para começar, o <b>Prof. Ronaldo</b> já vem com o perfil médio de um atacante.</p></div>
+          <div><span class="lbl">② NA TELA</span><p>os <span data-num="finais">18.147</span> jogadores reais apagados, a prévia tracejada e os jogadores criados em destaque.</p></div>
+          <div><span class="lbl">③ SAI</span><p>PC1 e PC2, a posição prevista com 37 atributos, k = 2 e k = 10 e os 5 jogadores reais mais parecidos.</p></div>
+        </div>
+
+        <div class="grid2 block create">
+          <figure class="screen create-screen">
+            <canvas id="create-canvas" aria-label="Mapa PCA com os jogadores criados em destaque"></canvas>
+            <div class="osd osd-tl vt">SEU JOGADOR · FORA DA BASE</div>
+            <div class="osd osd-tr vt" id="cr-coords">PC1 — · PC2 —</div>
+            <div class="axis-lbl ax-x lbl">PC1 · goleiro ←→ jogador de linha habilidoso</div>
+            <div class="axis-lbl ax-y lbl">PC2 · ataque ←→ defesa</div>
+          </figure>
+          <div class="cr-side">
+            <div class="cr-id">
+              <label><span class="lbl muted">nome</span><input id="cr-name" type="text" value="Prof. Ronaldo" maxlength="28" autocomplete="off" spellcheck="false"></label>
+              <label><span class="lbl muted">clube</span><input id="cr-club" type="text" value="FIB" maxlength="24" autocomplete="off" spellcheck="false"></label>
+              <label><span class="lbl muted">posição que você diz</span><select id="cr-pos"></select></label>
+            </div>
+            <div class="cr-presets"><span class="lbl muted">perfil médio de</span><div class="seg" id="cr-presets"></div></div>
+            <div class="cr-attrs" id="cr-attrs"></div>
+            <div class="cr-pred" id="cr-pred"></div>
+            <div class="cr-actions">
+              <button type="button" class="cr-add" id="cr-add">＋ ADICIONAR AO MAPA</button>
+              <button type="button" class="cr-clear" id="cr-clear">LIMPAR MEUS JOGADORES</button>
+            </div>
+            <ul class="list cr-list" id="cr-list"></ul>
+            <div class="bh mt" style="margin-bottom:0"><h2 style="font-size:16px"><i>≈</i>Mais parecidos na base real</h2><span class="lbl muted">37 atributos padronizados</span></div>
+            <ul class="list nb" id="cr-near"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== 12 FIM -->
     <section class="ch fim" id="fim" data-name="FIM">
       <div class="wrap">
         <div class="ph">
           <div>
-            <div class="ph-kicker"><span class="vt">CAP 11</span><span class="lbl muted">LEIA ANTES DE USAR</span></div>
+            <div class="ph-kicker"><span class="vt">CAP 12</span><span class="lbl muted">LEIA ANTES DE USAR</span></div>
             <h1>Fim da <br>fita</h1>
           </div>
           <div class="ph-side"><b>⏏ EJECT</b>17/11/2026</div>
