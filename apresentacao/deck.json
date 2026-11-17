@@ -1,0 +1,34 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-11-10T11:30:00Z" },
+  "lists": "css",
+  "title": "Como Enxergar Muitas Dimensões?",
+  "order": [
+    "cover", "jogo", "resposta",
+    "problema", "pergunta",
+    "analogia", "intuicao", "algoritmo", "exemplo",
+    "dados-origem", "dados-preparo", "dados-descobertas",
+    "exp-hipoteses", "exp-e1", "exp-variancia", "exp-f1", "exp-e4", "exp-resultado",
+    "erros", "erros-casos", "limitacoes",
+    "prototipo", "demo-challenge",
+    "conclusoes",
+    "perguntas"
+  ],
+  "sections": {
+    "abertura": { "description": "Abertura: um jogo de adivinhar a posição só pelos números (3–5 min).", "start": "cover" },
+    "problema": { "description": "Problema: 37 notas por jogador são demais para enxergar e muito redundantes (4–6 min).", "start": "problema" },
+    "conceitos": { "description": "Conceitos e algoritmo: a analogia da sombra, a direção de maior variância e os 4 passos do PCA (8–12 min).", "start": "analogia" },
+    "dados": { "description": "Dados: origem, variáveis, problemas, preparação e descobertas (5–8 min).", "start": "dados-origem" },
+    "experimentos": { "description": "Experimentos: baseline e os 4 experimentos (padronização, variância, classificador, sem goleiros) (8–12 min).", "start": "exp-hipoteses" },
+    "erros": { "description": "Erros e limitações: onde o modelo erra e o que o projeto não resolve (4–6 min).", "start": "erros" },
+    "prototipo": { "description": "Protótipo ao vivo: o site interativo e o Demo Challenge no app (6–10 min).", "start": "prototipo" },
+    "conclusoes": { "description": "Conclusões: o que aprendemos e quando o PCA faz ou não sentido (2–4 min).", "start": "conclusoes" },
+    "perguntas": { "description": "Perguntas e equipe.", "start": "perguntas" }
+  },
+  "faces": {
+    "barlow-condensed": { "family": "Barlow Condensed", "href": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&display=swap" },
+    "ibm-plex-mono": { "family": "IBM Plex Mono", "href": "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" },
+    "vt323": { "family": "VT323", "href": "https://fonts.googleapis.com/css2?family=VT323&display=swap" }
+  },
+  "designSystems": []
+}

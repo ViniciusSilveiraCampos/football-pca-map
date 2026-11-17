@@ -1,0 +1,18 @@
+<section id="dados-preparo" data-transition="fade" style="background:#efeee9;color:#121212;font-family:'IBM Plex Mono', 'Courier New', monospace;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'VT323', 'Courier New', monospace;font-size:36px;color:#2340ff;letter-spacing:2px">04 · DADOS · PROBLEMAS E PREPARAÇÃO</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:96px;font-weight:800;line-height:0.95;text-transform:uppercase">Antes de qualquer conta</h2>
+</div>
+<table style="font-size:26px;color:#121212">
+<tr><th style="width:32%">Problema</th><th style="width:42%">O que fizemos</th><th style="width:26%">Resultado</th></tr>
+<tr><td>Altura em pés (5'7)</td><td>cm = 30,48·pés + 2,54·pol</td><td>170,2 cm</td></tr>
+<tr><td>Peso em libras (159lbs)</td><td>kg = 0,4536 · lbs</td><td>72,1 kg</td></tr>
+<tr><td>27 códigos de posição</td><td>Agrupados em 4 grupos</td><td>GOL · DEF · MEI · ATA</td></tr>
+<tr><td>60 sem posição</td><td>Descartados, com registro no log</td><td>18.147 ficam</td></tr>
+<tr><td>Avaliar sem vazamento</td><td>Treino/teste 75/25 estratificado</td><td>13.610 / 4.537</td></tr>
+<tr><td>Escalas diferentes</td><td>StandardScaler, fit só no treino</td><td>média 0, desvio 1</td></tr>
+</table>
+<p style="font-size:26px;color:#4b4b48;line-height:1.45">Todas as etapas aleatórias usam <b style="color:#121212">random_state = 42</b>: quem rodar de novo chega nos mesmos números.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6b6a66">FOOTBALL PCA MAP · DADOS</p>
+<aside>Problemas reais do CSV: unidades americanas em texto ("5'7", "159lbs"), 60 jogadores sem posição e atributos em escalas muito diferentes. Destaque a divisão treino/teste: o scaler e o PCA aprendem só com os 13.610 jogadores de treino. Os 4.537 de teste ficam guardados, como se fossem jogadores que o modelo nunca viu. Estratificar mantém a proporção de goleiros, defensores, meias e atacantes nos dois lados.</aside>
+</section>

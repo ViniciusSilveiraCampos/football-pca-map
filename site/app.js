@@ -16,7 +16,13 @@ let PRESENT = false; // modo apresentação (um capítulo por tela)
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const nf = (v, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+// toLocaleString cria um formatador novo a cada chamada; guardamos um por nº de casas
+const NF = new Map();
+const nf = (v, d = 0) => {
+  let f = NF.get(d);
+  if (!f) NF.set(d, (f = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d })));
+  return f.format(v);
+};
 const pct = (r, d = 1) => nf(r * 100, d) + "%";
 const sgn = (v, d = 2) => (v >= 0 ? "+" : "−") + nf(Math.abs(v), d);
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -172,15 +178,35 @@ function layout(w, h, { top = 46, bottom = 42, side = 22 } = {}) {
 const mapX = (r, v) => r.x + ((v - BOUNDS.x0) / (BOUNDS.x1 - BOUNDS.x0)) * r.w;
 const mapY = (r, v) => r.y + ((BOUNDS.y1 - v) / (BOUNDS.y1 - BOUNDS.y0)) * r.h;
 
+// os pontos vão direto para um buffer de pixels (um por canvas de destino) e entram
+// com um drawImage só: 18 mil fillRect por frame custavam ~25 ms num notebook fraco
+const GC_RGB = GC.map((c) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16)));
+const DOTS = new WeakMap();
+function dotBuffer(target) {
+  const W = target.width, H = target.height;
+  let b = DOTS.get(target);
+  if (!b || b.cv.width !== W || b.cv.height !== H) {
+    const cv = document.createElement("canvas"), img = new ImageData(W, H);
+    cv.width = W; cv.height = H;
+    b = { cv, ctx: cv.getContext("2d"), img, u32: new Uint32Array(img.data.buffer) };
+    DOTS.set(target, b);
+  }
+  return b;
+}
+
 // desenha os jogadores entre o campo (t = 0) e o mapa PCA (t = 1)
 function drawPlayers(ctx, L, t, { size = 1.7, alpha = 0.62, filter = null, sx = null, sy = null } = {}) {
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  if (!W || !H) return;
   const fr = L.field, mr = L.map, kx = fr.w / 105, ky = fr.h / 68;
   const ax = mr.w / (BOUNDS.x1 - BOUNDS.x0), ay = mr.h / (BOUNDS.y1 - BOUNDS.y0);
-  const hs = size / 2;
-  ctx.globalAlpha = alpha;
+  const hs = size / 2, dpr = ctx.getTransform().a, s = Math.max(1, Math.round(size * dpr));
+  // o quadrado é arredondado para pixels inteiros; a opacidade compensa a área a mais
+  const a = alpha * Math.min(1, (size * dpr) ** 2 / (s * s)), ia = 1 - a;
+  const b = dotBuffer(ctx.canvas), d = b.img.data;
+  b.u32.fill(0);
   for (let g = 0; g < 4; g++) {
-    const idx = BY_GROUP[g], on = !filter || filter[g];
-    ctx.fillStyle = GC[g];
+    const idx = BY_GROUP[g], on = !filter || filter[g], [cr, cg, cb] = GC_RGB[g];
     for (let k = 0; k < idx.length; k++) {
       const i = idx[k];
       if (!on) { if (sx) sx[i] = NaN; continue; }
@@ -190,10 +216,18 @@ function drawPlayers(ctx, L, t, { size = 1.7, alpha = 0.62, filter = null, sx = 
       const x1 = mr.x + (PC1[i] - BOUNDS.x0) * ax, y1 = mr.y + (BOUNDS.y1 - PC2[i]) * ay;
       const x = x0 + (x1 - x0) * e, y = y0 + (y1 - y0) * e;
       if (sx) { sx[i] = x; sy[i] = y; }
-      ctx.fillRect(x - hs, y - hs, size, size);
+      // quadrado de s × s pixels, misturado por cima do que já está no buffer ("source-over")
+      const px0 = Math.round((x - hs) * dpr), py0 = Math.round((y - hs) * dpr);
+      for (let py = Math.max(0, py0); py < Math.min(H, py0 + s); py++) {
+        for (let px = Math.max(0, px0); px < Math.min(W, px0 + s); px++) {
+          const p = (py * W + px) << 2, da = d[p + 3] / 255, oa = a + da * ia, q = a / oa, f = (da * ia) / oa;
+          d[p] = cr * q + d[p] * f; d[p + 1] = cg * q + d[p + 1] * f; d[p + 2] = cb * q + d[p + 2] * f; d[p + 3] = oa * 255;
+        }
+      }
     }
   }
-  ctx.globalAlpha = 1;
+  b.ctx.putImageData(b.img, 0, 0);
+  blit(ctx, b.cv);
 }
 
 function drawMapAxes(ctx, r, alpha) {
@@ -228,7 +262,7 @@ function layerCache() {
     return cv;
   };
 }
-function blit(ctx, layer) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(layer, 0, 0); ctx.restore(); }
+function blit(ctx, layer) { if (!layer.width || !layer.height) return; ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(layer, 0, 0); ctx.restore(); }
 
 // cada laço só roda com o canvas na tela; sem nenhum visível, o requestAnimationFrame para
 const loops = [];
@@ -239,7 +273,12 @@ const loopIO = new IntersectionObserver((es) => {
   wake();
 }, { rootMargin: "80px" });
 function loop(el, fn) { const o = { el, fn, vis: false }; loops.push(o); loopIO.observe(el); return o; }
-function frame(now) { raf = 0; for (const o of loops) if (o.vis) o.fn(now); wake(); }
+// um laço com erro não pode derrubar os outros (nem parar o requestAnimationFrame)
+function frame(now) {
+  raf = 0;
+  for (const o of loops) if (o.vis) { try { o.fn(now); } catch (e) { console.error(e); } }
+  wake();
+}
 
 function onSeen(el, fn, threshold = 0.25) {
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.disconnect(); fn(); } }), { threshold });

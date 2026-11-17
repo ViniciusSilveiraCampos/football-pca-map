@@ -1,6 +1,6 @@
 # Compila artigo/main.tex (resumo da XXI Jornada Científica da FIB, no
-# máximo 2 páginas) e publica o PDF como artefato. Em tags
-# artigo-v* também anexa o PDF a um release com o mesmo nome:
+# máximo 2 páginas) e os slides de apresentacao/, e publica os PDFs como
+# artefatos. Em tags artigo-v* também anexa os dois a um release com o mesmo nome:
 #   git tag artigo-v1.0 && git push origin artigo-v1.0
 #
 # Push na main não dispara aqui: o artigo.yml já compila e envia ao Discord.
@@ -14,6 +14,7 @@ on:
   pull_request:
     paths:
       - "artigo/**"
+      - "apresentacao/**"
       - ".github/workflows/artigo-release.yml"
   workflow_dispatch:
 
@@ -86,18 +87,36 @@ jobs:
           path: ${{ env.PDF }}
           if-no-files-found: error
 
+      # Slides (formato do deck do Claude) -> PDF com o Chrome que já vem no runner
+      - name: Gerar o PDF da apresentação
+        run: |
+          node apresentacao/build.mjs --pdf
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            slides="football-pca-map-apresentacao-${GITHUB_REF_NAME#artigo-}.pdf"
+          else
+            slides="football-pca-map-apresentacao.pdf"
+          fi
+          cp apresentacao/dist/apresentacao.pdf "$slides"
+          echo "SLIDES=$slides" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: apresentacao-pdf
+          path: ${{ env.SLIDES }}
+          if-no-files-found: error
+
       # gh já vem instalado nos runners; se o release da tag já existir
-      # (ex.: criado pela interface), apenas substitui o PDF anexado
-      - name: Anexar o PDF ao release
+      # (ex.: criado pela interface), apenas substitui os PDFs anexados
+      - name: Anexar os PDFs ao release
         if: startsWith(github.ref, 'refs/tags/artigo-v')
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$PDF" --clobber
+            gh release upload "$TAG" "$PDF" "$SLIDES" --clobber
           else
-            gh release create "$TAG" "$PDF" \
+            gh release create "$TAG" "$PDF" "$SLIDES" \
               --title "Resumo Jornada 2026 - $TAG" \
               --generate-notes
           fi

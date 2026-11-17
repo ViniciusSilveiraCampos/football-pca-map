@@ -1,0 +1,22 @@
+<section id="erros-casos" data-transition="fade" style="background:#efeee9;color:#121212;font-family:'IBM Plex Mono', 'Courier New', monospace;padding:128px 128px 160px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<p style="font-family:'VT323', 'Courier New', monospace;font-size:36px;color:#2340ff;letter-spacing:2px">06 · ERROS E LIMITAÇÕES · CASOS</p>
+<h2 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:96px;font-weight:800;line-height:0.95;text-transform:uppercase">Os erros têm posição</h2>
+</div>
+<table style="font-size:26px;color:#121212">
+<tr><th style="width:34%">Posição</th><th style="width:22%">Grupo real</th><th style="width:14%;text-align:right">Erro</th><th style="width:30%">Vira, quando erra</th></tr>
+<tr><td>RW · ponta-direita</td><td>Atacante</td><td style="text-align:right;color:#c0281f">68%</td><td>Meio-campo</td></tr>
+<tr><td>LW · ponta-esquerda</td><td>Atacante</td><td style="text-align:right;color:#c0281f">61%</td><td>Meio-campo</td></tr>
+<tr><td>RWB · ala-direito</td><td>Defensor</td><td style="text-align:right">44%</td><td>Meio-campo</td></tr>
+<tr><td>CDM · volante</td><td>Meio-campo</td><td style="text-align:right">17%</td><td>Defensor</td></tr>
+<tr><td>GK · goleiro</td><td>Goleiro</td><td style="text-align:right;color:#2340ff">0%</td><td>nunca erra</td></tr>
+</table>
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fbfaf7;border:2px solid #121212;padding:24px"><h3 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:36px;font-weight:700;text-transform:uppercase">Isco · LW</h3><p style="font-size:24px;line-height:1.4;color:#4b4b48">Ponta com perfil de armador → meia.</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fbfaf7;border:2px solid #121212;padding:24px"><h3 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:36px;font-weight:700;text-transform:uppercase">Sterling · RW</h3><p style="font-size:24px;line-height:1.4;color:#4b4b48">Ponta que também cria jogadas → meia.</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fbfaf7;border:2px solid #121212;padding:24px"><h3 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:36px;font-weight:700;text-transform:uppercase">Gueye · RDM</h3><p style="font-size:24px;line-height:1.4;color:#4b4b48">Volante que desarma como zagueiro → defensor.</p></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fbfaf7;border:2px solid #121212;padding:24px"><h3 style="font-family:'Barlow Condensed', Arial, sans-serif;font-size:36px;font-weight:700;text-transform:uppercase">Callejón · RM</h3><p style="font-size:24px;line-height:1.4;color:#4b4b48">Meia de lado que ataca como ponta → atacante.</p></div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6b6a66">FOOTBALL PCA MAP · ERRO POR POSIÇÃO NO TESTE · REGRESSÃO LOGÍSTICA COM 37 ATRIBUTOS</p>
+<aside>Casos de erro concretos. A tabela é a taxa de erro por posição original do FIFA, no conjunto de teste. Os piores casos são pontas (RW, LW): no jogo, pontas e meias de lado têm perfis quase iguais, mas nós colocamos uns em Atacante e outros em Meio-campo. Alas (RWB) e volantes (CDM) são a mesma história na fronteira Defensor/Meio. Os 4 jogadores embaixo são erros reais do modelo, com overall alto (não é ruído de jogador fraco). No app, aba "Desafie o modelo", dá para mostrar cada um no mapa.</aside>
+</section>

@@ -35,6 +35,9 @@ artigo/*.fdb_latexmk
 artigo/*.synctex.gz
 artigo/*.pdf
 
+# Apresentação (gerada por apresentacao/build.mjs)
+apresentacao/dist/
+
 # Claude Code (configuração pessoal, contém a chave do LangSmith)
 .claude/settings.local.json
 

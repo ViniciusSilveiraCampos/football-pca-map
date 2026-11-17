@@ -22,6 +22,17 @@ jobs:
           name: artigo-pdf
           path: artigo/main.pdf
 
+      # Slides em apresentacao/ (formato do deck do Claude) -> PDF com o Chrome do runner
+      - name: Build slides PDF
+        run: |
+          node apresentacao/build.mjs --pdf
+          cp apresentacao/dist/apresentacao.pdf football-pca-map-apresentacao.pdf
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: apresentacao-pdf
+          path: football-pca-map-apresentacao.pdf
+
       # Por enquanto o PDF vai para o Discord; o email via SMTP fica para depois.
       - name: Send PDF to Discord
         env:

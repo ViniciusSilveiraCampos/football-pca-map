@@ -10,6 +10,10 @@ Python 3.12, gerenciado com **uv**.
 - `src/football_pca_map/` — pacote principal (layout `src/`).
 - `tests/` — pytest; `pythonpath = ["src"]` já configurado.
 - `data/raw/` e `outputs/` — dados brutos e figuras geradas, fora do git.
+- `apresentacao/` — slides do seminário ("Como Enxergar Muitas Dimensões?") no formato do deck
+  Slides do Claude: `deck.json` (ordem e seções) + `slides/<id>.html` (um `<section>` 1920×1080 com
+  estilos inline, notas no `<aside>`). `node apresentacao/build.mjs [--pdf]` gera `apresentacao/dist/`
+  (HTML navegável: ←/→, `N` notas, `F` tela cheia; PDF via Chrome/Chromium ou `$CHROME`).
 
 ## Comandos
 
@@ -35,10 +39,12 @@ uv add --dev <pacote>   # dependência de desenvolvimento
   (precisa do secret `CLAUDE_CODE_OAUTH_TOKEN`).
 - `.github/workflows/artigo.yml` — a cada push na `main`, compila `artigo/main.tex` (resumo da XXI Jornada
   Científica, modelo da FIB em abnTeX2: Arial 10, máx. 2 páginas, logo em `artigo/figuras/`) e
-  envia o PDF para um canal do Discord (secret `DISCORD_WEBHOOK_URL`).
+  envia o PDF para um canal do Discord (secret `DISCORD_WEBHOOK_URL`). Também gera o PDF dos slides
+  de `apresentacao/`, só como artefato da execução.
   Para compilar localmente: `cd artigo && latexmk -pdf main.tex`.
-- `.github/workflows/artigo-release.yml` — compila o resumo em PRs que tocam `artigo/` (PDF como
-  artefato; falha se passar de 2 páginas) e, em tags `artigo-v*`, anexa o PDF a um release do GitHub.
+- `.github/workflows/artigo-release.yml` — compila o resumo e os slides em PRs que tocam `artigo/` ou
+  `apresentacao/` (PDFs como artefato; falha se o resumo passar de 2 páginas) e, em tags `artigo-v*`,
+  anexa os dois PDFs a um release do GitHub.
   Trechos grifados com `\completar{...}` no `main.tex` ainda precisam ser preenchidos. Não precisa de secret
   (usa o `GITHUB_TOKEN`). Para publicar: `git tag artigo-v1.0 && git push origin artigo-v1.0`.
 - `.github/workflows/deploy.yml` — a cada push na `main` que toque `site/` ou `deploy/`, faz `terraform apply`
